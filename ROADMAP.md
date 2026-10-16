@@ -60,3 +60,7 @@ Trash/recover deleted items, retroactive history, asset binary backups, public d
 Do not claim a complete V1 if reliable pre-save capture or owner-managed restoration cannot be demonstrated for both story and Static Pages. Track any necessary upstream Core/Static Pages API work explicitly.
 
 Tracking: https://github.com/hostellerie/todo
+
+## M0 — Résultat d'audit statique (16 octobre 2026)
+
+[Rapport détaillé](docs/M0-SAVE-HOOKS-AUDIT.md). Geeklog v2.2.2 appelle PLG_itemSaved() **après** DB_save() des articles et des pages statiques. PLG_itemPreSave() existe mais n'est pas invoqué dans les deux chemins étudiés. Une capture depuis itemsaved seule ne peut donc pas garantir l'ancien contenu ; prévoir un contrat avant mutation fourni par le propriétaire. Les pages statiques peuvent ensuite recalculer sp_content pour la recherche. **M0 reste bloqué** tant qu'un prototype sur installation réelle et le contrat de restauration n'ont pas été validés.
