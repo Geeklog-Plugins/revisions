@@ -42,7 +42,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'reconcile') {
             : 'Page is not eligible for tracking.';
     }
 }
-$out = '<h2>Revisions 0.1.0 — Static Pages pilot</h2><p>Read-only history. Initialize an existing simple Static Page BEFORE editing it. PHP/template pages are excluded. No restore function yet.</p>';
+$out = '<h2>Revisions 0.1.1 — Static Pages pilot</h2><p>Read-only history. Initialize an existing simple Static Page BEFORE editing it. PHP/template pages are excluded. No restore function yet.</p>';
 if ($message !== '') { $out .= '<p><strong>' . R_H($message) . '</strong></p>'; }
 $token = SEC_createToken();
 $out .= '<form method="post" action="' . R_H($_CONF['site_admin_url'] . '/plugins/revisions/index.php') . '">'
