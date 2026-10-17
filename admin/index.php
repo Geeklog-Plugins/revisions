@@ -77,7 +77,10 @@ if (isset($_GET['revision_id']) && ctype_digit((string) $_GET['revision_id'])) {
                 foreach (array('sp_title'=>'Title','sp_content'=>'Page content','meta_description'=>'Meta description') as $field=>$label) {
                     $oldValue = isset($old[$field]) ? (string)$old[$field] : '';
                     $currentValue = is_array($current) && isset($current[$field]) ? (string)$current[$field] : '';
-                    $revisionDetail .= '<div><h4>' . R_H($label) . '</h4><strong>Archived version</strong>'
+                    $changed = ($oldValue !== $currentValue);
+                    $revisionDetail .= '<div class="revisions-compare-field' . ($changed ? ' revisions-compare-field--changed' : '') . '">'
+                        . '<h4>' . R_H($label) . ' <small>' . ($changed ? 'Changed' : 'Unchanged') . '</small></h4>'
+                        . '<strong>Archived version</strong>'
                         . '<pre style="white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #ddd;padding:10px">'
                         . R_H($oldValue) . '</pre><strong>Current version</strong>'
                         . '<pre style="white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #ddd;padding:10px">'
