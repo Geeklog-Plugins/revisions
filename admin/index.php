@@ -19,6 +19,41 @@ function REVISIONS_ADMIN_pageTitle($id) {
     return '(page unavailable)';
 }
 function R_H($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+function REVISIONS_ADMIN_lineDiff($before, $after)
+{
+    if ($before === $after) { return '<p>No line changes.</p>'; }
+    // Diff is read-only and bounded to avoid expensive dynamic programming.
+    if (strlen($before) > 50000 || strlen($after) > 50000) {
+        return '<p>Content is too long for line comparison; use the source panels above.</p>';
+    }
+    $a = preg_split('/\\r\\n|\\r|\\n/', $before);
+    $b = preg_split('/\\r\\n|\\r|\\n/', $after);
+    if (count($a) > 160 || count($b) > 160) {
+        return '<p>More than 160 lines: use the full source panels above.</p>';
+    }
+    $n = count($a); $m = count($b); $dp = array();
+    for ($i = 0; $i <= $n; $i++) { $dp[$i] = array_fill(0, $m + 1, 0); }
+    for ($i = $n - 1; $i >= 0; $i--) {
+        for ($j = $m - 1; $j >= 0; $j--) {
+            $dp[$i][$j] = ($a[$i] === $b[$j]) ? 1 + $dp[$i+1][$j+1] : max($dp[$i+1][$j], $dp[$i][$j+1]);
+        }
+    }
+    $html = '<div class="revisions-line-diff" aria-label="Changes by line">';
+    $i = 0; $j = 0; $changes = 0;
+    while ($i < $n || $j < $m) {
+        if ($i < $n && $j < $m && $a[$i] === $b[$j]) { $i++; $j++; continue; }
+        if ($j < $m && ($i === $n || $dp[$i][$j+1] >= $dp[$i+1][$j])) {
+            $html .= '<div class="revisions-line-added"><span>+ Added: </span><code>' . R_H($b[$j]) . '</code></div>';
+            $j++;
+        } else {
+            $html .= '<div class="revisions-line-removed"><span>− Removed: </span><code>' . R_H($a[$i]) . '</code></div>';
+            $i++;
+        }
+        $changes++;
+    }
+    return $html . '</div><p>' . (int)$changes . ' changed lines (added and removed).</p>';
+}
+
 global $_TABLES, $_CONF;
 $message = '';
 if (isset($_POST['action']) && $_POST['action'] === 'baseline') {
@@ -86,6 +121,11 @@ if (isset($_GET['revision_id']) && ctype_digit((string) $_GET['revision_id'])) {
                         . '<pre style="white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #ddd;padding:10px">'
                         . R_H($currentValue) . '</pre></div>';
                 }
+                $oldSource = isset($old['sp_content']) ? (string)$old['sp_content'] : '';
+                $currentSource = is_array($current) && isset($current['sp_content']) ? (string)$current['sp_content'] : '';
+                $revisionDetail .= '</div><h4>Changed content lines</h4>'
+                    . REVISIONS_ADMIN_lineDiff($oldSource, $currentSource)
+                    . '<div>';
                 $rawHtml = isset($old['sp_content']) ? (string) $old['sp_content'] : '';
                 $revisionDetail .= '</div>'
                     . '<h4>Archived HTML source — copy/paste</h4>'
