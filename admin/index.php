@@ -8,6 +8,16 @@ if (!SEC_inGroup('Root') || !SEC_hasRights('revisions.admin')) {
 function REVISIONS_ADMIN_canEdit($r) {
     return SEC_hasAccess($r['owner_id'], $r['group_id'], $r['perm_owner'], $r['perm_group'], $r['perm_members'], $r['perm_anon']) >= 3;
 }
+function REVISIONS_ADMIN_pageTitle($id) {
+    global $_TABLES;
+    $safe = DB_escapeString($id);
+    $r = DB_query("SELECT sp_title FROM {$_TABLES['staticpage']} WHERE sp_id='$safe' LIMIT 1", 1);
+    if ($r && DB_numRows($r) === 1) {
+        $page = DB_fetchArray($r);
+        if (isset($page['sp_title']) && trim($page['sp_title']) !== '') { return $page['sp_title']; }
+    }
+    return '(page unavailable)';
+}
 function R_H($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 global $_TABLES, $_CONF;
 $message = '';
@@ -93,29 +103,54 @@ if (isset($_GET['revision_id']) && ctype_digit((string) $_GET['revision_id'])) {
         }
     }
 }
-$out = '<h2>Revisions ' . R_H(plugin_chkVersion_revisions()) . ' — Static Pages pilot</h2><p>Read-only history. Initialize an existing simple Static Page BEFORE editing it. PHP/template pages are excluded. No restore function yet.</p>';
-if ($message !== '') { $out .= '<p><strong>' . R_H($message) . '</strong></p>'; }
-$token = SEC_createToken();
-$out .= '<form method="post" action="' . R_H($_CONF['site_admin_url'] . '/plugins/revisions/index.php') . '">'
-    . '<div style="display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:16px 0 24px">'
-    . '<label for="revisions-sp-id" style="display:flex;flex-direction:column;gap:6px;font-weight:600">'
-    . 'Static Page ID'
-    . '<input id="revisions-sp-id" type="text" name="sp_id" maxlength="128" '
-    . 'style="width:min(100%,420px);min-width:260px;padding:9px" required>'
-    . '</label>'
-    . '<input type="hidden" name="action" value="baseline">'
-    . '<input type="hidden" name="' . R_H(CSRF_TOKEN) . '" value="' . R_H($token) . '">'
-    . '<button type="submit" style="padding:10px 18px">Start tracking</button>'
-    . '</div></form>';
-$q = DB_query("SELECT revision_id,sp_id,actor_id,created_at FROM {$_TABLES['revisions_history']} ORDER BY revision_id DESC LIMIT 50",1);
-$tracked = DB_query("SELECT sp_id,updated_at FROM {$_TABLES['revisions_baseline']} ORDER BY updated_at DESC LIMIT 50", 1);
-$out .= '<h3>Tracked pages</h3><p>Use Check changes to recover saves not recorded by the automatic callback.</p>';
+$section = isset($_GET['section']) ? (string) $_GET['section'] : 'home';
+if (isset($_GET['revision_id'])) { $section = 'history'; }
+if (isset($_POST['action'])) { $section = 'pages'; }
+if (!in_array($section, array('home','pages','history','help'), true)) { $section = 'home'; }
+$base = $_CONF['site_admin_url'] . '/plugins/revisions/index.php';
+$out = '<link rel="stylesheet" href="' . R_H($_CONF['site_admin_url'] . '/plugins/revisions/admin.css?v=' . plugin_chkVersion_revisions()) . '">'
+    . '<h1>Revisions ' . R_H(plugin_chkVersion_revisions()) . '</h1>'
+    . '<p>Static Pages history: capture, inspect, and copy earlier editorial source. Restoration is not yet available.</p>';
+$navItems = array('home'=>'Overview','pages'=>'Tracked pages','history'=>'History','help'=>'Help');
+$out .= '<nav class="plugin-admin-nav" aria-label="Revisions administration"><div class="plugin-admin-nav__primary">';
+foreach ($navItems as $key => $label) {
+    $active = $section === $key;
+    $out .= '<a class="plugin-admin-nav__item' . ($active ? ' is-active' : '') . '"'
+        . ($active ? ' aria-current="page"' : '')
+        . ' href="' . R_H($base . '?section=' . $key) . '">' . R_H($label) . '</a>';
+}
+$out .= '</div></nav>';
+if ($message !== '') { $out .= '<p class="revisions-message" role="status">' . R_H($message) . '</p>'; }
+if ($section === 'home') {
+    $countTracked = DB_query("SELECT COUNT(*) AS cnt FROM {$_TABLES['revisions_baseline']}",1);
+    $countHistory = DB_query("SELECT COUNT(*) AS cnt FROM {$_TABLES['revisions_history']}",1);
+    $pagesNumber = $countTracked ? DB_fetchArray($countTracked) : array('cnt'=>'?');
+    $revsNumber = $countHistory ? DB_fetchArray($countHistory) : array('cnt'=>'?');
+    $out .= '<h2>Overview</h2><p><strong>' . R_H($pagesNumber['cnt']) . '</strong> tracked pages · <strong>'
+        . R_H($revsNumber['cnt']) . '</strong> archived revisions.</p>'
+        . '<p><a href="' . R_H($base . '?section=pages') . '">Manage tracked pages</a> · '
+        . '<a href="' . R_H($base . '?section=history') . '">Browse history</a></p>'
+        . '<h3>Getting started</h3><ol><li>Open Tracked pages and initialize an existing simple Static Page.</li>'
+        . '<li>Edit that page and save your changes in Geeklog.</li>'
+        . '<li>Open History to inspect and copy the previous source.</li></ol>'
+        . '<p>PHP and template Static Pages are excluded. No automatic restoration or asset backup is included.</p>';
+} elseif ($section === 'pages') {
+    $out .= '<h2>Start tracking a page</h2><p>Use the exact Static Page ID. Tracking begins from the current saved state, not past edits.</p>';
+    $token = SEC_createToken();
+    $out .= '<form class="revisions-track-form" method="post" action="' . R_H($base) . '">'
+        . '<label for="revisions-sp-id">Static Page ID</label>'
+        . '<input id="revisions-sp-id" name="sp_id" maxlength="128" required>'
+        . '<input type="hidden" name="action" value="baseline">'
+        . '<input type="hidden" name="' . R_H(CSRF_TOKEN) . '" value="' . R_H($token) . '">'
+        . '<button type="submit">Start tracking</button></form>';
+    $tracked = DB_query("SELECT sp_id,updated_at FROM {$_TABLES['revisions_baseline']} ORDER BY updated_at DESC LIMIT 50", 1);
+$out .= '<h2>Tracked pages</h2><p>Check changes compares the current page with the last saved baseline.</p>';
 $out .= '<p><small>Tracking table: ' . R_H($_TABLES['revisions_baseline']) . '; History table: ' . R_H($_TABLES['revisions_history']) . '</small></p>';
 if ($tracked && DB_numRows($tracked) > 0) {
-    $out .= '<table><thead><tr><th>Page ID</th><th>Last tracking update</th><th>Check changes</th></tr></thead><tbody>';
+    $out .= '<table><thead><tr><th>Page</th><th>Last tracking update</th><th>Check changes</th></tr></thead><tbody>';
     while ($t = DB_fetchArray($tracked)) {
         $token = SEC_createToken();
-        $out .= '<tr><td>' . R_H($t['sp_id']) . '</td><td>' . R_H($t['updated_at']) . '</td><td>'
+        $out .= '<tr><td><strong>' . R_H(REVISIONS_ADMIN_pageTitle($t['sp_id'])) . '</strong><br><small>' . R_H($t['sp_id']) . '</small>' . '</td><td>' . R_H($t['updated_at']) . '</td><td>'
             . '<form method="post" action="' . R_H($_CONF['site_admin_url'] . '/plugins/revisions/index.php') . '">'
             . '<input type="hidden" name="sp_id" value="' . R_H($t['sp_id']) . '">'
             . '<input type="hidden" name="action" value="reconcile">'
@@ -126,11 +161,22 @@ if ($tracked && DB_numRows($tracked) > 0) {
 } else {
     $out .= '<p><strong>No pages are being tracked yet.</strong> Add the exact existing Static Page ID above and verify the confirmation message. If the message reports an error, inspect Geeklog error.log for SQL details.</p>';
 }
-$out .= $revisionDetail;
-$out .= '<h3>Recent versions</h3><table><thead><tr><th>Revision</th><th>Page</th><th>Author</th><th>Date</th></tr></thead><tbody>';
+}
+} elseif ($section === 'history') {
+    $q = DB_query("SELECT revision_id,sp_id,actor_id,created_at FROM {$_TABLES['revisions_history']} ORDER BY revision_id DESC LIMIT 50",1);
+    $out .= $revisionDetail;
+    $out .= '<h3>Revision history</h3><table><thead><tr><th>Revision</th><th>Page</th><th>Author</th><th>Date</th></tr></thead><tbody>';
 if ($q) { while ($r=DB_fetchArray($q)) {
     $detailUrl = $_CONF['site_admin_url'] . '/plugins/revisions/index.php?revision_id=' . (int) $r['revision_id'];
     $out .= '<tr><td><a href="' . R_H($detailUrl) . '">#'.R_H($r['revision_id']).' — View</a></td><td>'.R_H($r['sp_id']).'</td><td>'.R_H($r['actor_id']).'</td><td>'.R_H($r['created_at']).'</td></tr>';
 } }
 $out .= '</tbody></table><p>Snapshots are stored in database. Select View to compare archived source and current source.</p>';
+
+} else {
+    $out .= '<h2>Help</h2><p><strong>How tracking works:</strong> initialize a simple Static Page, edit and save it, then look in History. An archive contains the earlier stored source.</p>'
+        . '<p><strong>Missing updates:</strong> use Check changes in Tracked pages. A recovered change has author ID 0 because the original editor is unknown.</p>'
+        . '<p><strong>HTML source:</strong> select View in History, then copy the escaped source from the read-only field into the Geeklog HTML/source editor.</p>'
+        . '<p><strong>Limitations:</strong> PHP/template pages, file recovery, automatic restore and multi-writer atomicity are not supported in this pilot.</p>'
+        . '<p><a href="https://github.com/hostellerie/revisions">Project documentation</a></p>';
+}
 COM_output(COM_createHTMLDocument($out,array('pagetitle'=>'Revisions')));
