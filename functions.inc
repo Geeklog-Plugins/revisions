@@ -1,5 +1,5 @@
 <?php
-/* Revisions 0.1.4: Static Pages history pilot, PHP 5.6-compatible syntax. */
+/* Revisions 0.1.5: Static Pages history pilot, PHP 5.6-compatible syntax. */
 global $_CONF, $_TABLES, $_DB_table_prefix;
 $_TABLES['revisions_baseline'] = $_DB_table_prefix . 'revisions_baseline';
 $_TABLES['revisions_history'] = $_DB_table_prefix . 'revisions_history';
@@ -24,7 +24,7 @@ function plugin_chkVersion_revisions()
 }
 /**
  * Upgrade metadata only when required history storage is present.
- * 0.1.0 -> 0.1.4 introduces no database schema changes.
+ * 0.1.0 -> 0.1.5 introduces no database schema changes.
  */
 function plugin_upgrade_revisions()
 {
