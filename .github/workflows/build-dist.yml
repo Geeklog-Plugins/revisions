@@ -44,7 +44,8 @@ jobs:
         run: |
           set -euo pipefail
           grep -Eq "pi_version.*0[.]1[.]4" autoinstall.php
-          grep -Eq "return '0[.]1[.]4'" functions.inc
+          grep -Fq "function plugin_chkVersion_revisions()" functions.inc
+          grep -Fq "return \$spec['info']['pi_version'];" functions.inc
           mkdir -p build/revisions/admin build/revisions/sql dist
           cp autoinstall.php functions.inc build/revisions/
           cp admin/index.php build/revisions/admin/
