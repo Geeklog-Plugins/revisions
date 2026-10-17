@@ -1,0 +1,94 @@
+<?php
+/* Revisions 0.1.0: Static Pages history pilot, PHP 5.6-compatible syntax. */
+global $_CONF, $_TABLES, $_DB_table_prefix;
+$_TABLES['revisions_baseline'] = $_DB_table_prefix . 'revisions_baseline';
+$_TABLES['revisions_history'] = $_DB_table_prefix . 'revisions_history';
+function plugin_getadminoption_revisions()
+{
+    global $_CONF;
+    if (!SEC_hasRights('revisions.admin')) { return null; }
+    return array('Revisions', $_CONF['site_admin_url'] . '/plugins/revisions/index.php', 0);
+}
+function plugin_cclabel_revisions()
+{
+    global $_CONF;
+    if (!SEC_hasRights('revisions.admin')) { return array(); }
+    return array('Revisions', $_CONF['site_admin_url'] . '/plugins/revisions/index.php');
+}
+function plugin_chkVersion_revisions() { return '0.1.0'; }
+function plugin_upgrade_revisions() { return true; }
+function REVISIONS_fields()
+{
+    return array('sp_title','sp_page_title','sp_content','page_data','postmode','meta_description',
+        'meta_keywords','structured_data_type','sp_format','draft_flag','template_flag','template_id',
+        'sp_php','sp_prev','sp_next','sp_parent','sp_centerblock','sp_where','sp_inblock',
+        'sp_onmenu','sp_label','sp_help','sp_nf','search');
+}
+function REVISIONS_extract($row)
+{
+    $out = array();
+    foreach (REVISIONS_fields() as $field) { $out[$field] = isset($row[$field]) ? $row[$field] : null; }
+    return $out;
+}
+function REVISIONS_snapshot($id)
+{
+    global $_TABLES;
+    $id = DB_escapeString($id);
+    $q = DB_query("SELECT * FROM {$_TABLES['staticpage']} WHERE sp_id='$id' LIMIT 1", 1);
+    if (!$q || DB_numRows($q) !== 1) { return false; }
+    $row = DB_fetchArray($q);
+    // PHP and template pages require a provider source adapter; fail closed.
+    if (!empty($row['sp_php']) || !empty($row['template_flag']) || !empty($row['template_id'])) { return false; }
+    return REVISIONS_extract($row);
+}
+function REVISIONS_encode($snapshot)
+{
+    $encoded = json_encode($snapshot);
+    return $encoded === false ? false : $encoded;
+}
+function REVISIONS_baseline($id, $snapshot)
+{
+    global $_TABLES;
+    $encoded = REVISIONS_encode($snapshot);
+    if ($encoded === false) { return false; }
+    $key = DB_escapeString($id);
+    $value = DB_escapeString($encoded);
+    $sha = hash('sha256',$encoded);
+    return (bool) DB_query("REPLACE INTO {$_TABLES['revisions_baseline']} (sp_id,snapshot_json,content_hash,updated_at) VALUES ('$key','$value','$sha',NOW())",1);
+}
+function REVISIONS_initialize($id)
+{
+    global $_TABLES;
+    $idEscaped = DB_escapeString($id);
+    $snap = REVISIONS_snapshot($id);
+    if ($snap === false) { return false; }
+    $has = DB_getItem($_TABLES['revisions_baseline'],'sp_id',"sp_id='$idEscaped'");
+    if ($has !== '') { return true; }
+    return REVISIONS_baseline($id,$snap);
+}
+function plugin_itemsaved_revisions($id,$type,$old_id='',$sub_type='')
+{
+    global $_TABLES, $_USER;
+    if ($type !== 'staticpages' || $id === '') { return; }
+    // Opt-in baseline must be initialized before modification.
+    $from = $old_id !== '' ? $old_id : $id;
+    $fromEscaped = DB_escapeString($from);
+    $q = DB_query("SELECT snapshot_json,content_hash FROM {$_TABLES['revisions_baseline']} WHERE sp_id='$fromEscaped' LIMIT 1",1);
+    if (!$q || DB_numRows($q) !== 1) { return; }
+    $old = DB_fetchArray($q);
+    $snapshot = REVISIONS_snapshot($id);
+    if ($snapshot === false) { return; }
+    $nowJson = REVISIONS_encode($snapshot);
+    if ($nowJson === false) { return; }
+    $nowHash = hash('sha256',$nowJson);
+    if ($old['content_hash'] !== $nowHash) {
+        $uid = isset($_USER['uid']) ? (int)$_USER['uid'] : 0;
+        $json = DB_escapeString($old['snapshot_json']);
+        $qSave = DB_query("INSERT INTO {$_TABLES['revisions_history']} (sp_id,actor_id,snapshot_json,content_hash,created_at) VALUES ('" . DB_escapeString($id) . "',$uid,'$json','" . DB_escapeString($old['content_hash']) . "',NOW())",1);
+        if (!$qSave) { COM_errorLog('Revisions: history insert failed. Baseline not advanced.'); return; }
+    }
+    if (!REVISIONS_baseline($id,$snapshot)) { COM_errorLog('Revisions: baseline write failed.'); return; }
+    if ($old_id !== '' && $old_id !== $id) {
+        DB_query("DELETE FROM {$_TABLES['revisions_baseline']} WHERE sp_id='" . DB_escapeString($old_id) . "'",1);
+    }
+}
