@@ -62,9 +62,18 @@ function REVISIONS_initialize($id)
     $idEscaped = DB_escapeString($id);
     $snap = REVISIONS_snapshot($id);
     if ($snap === false) { return false; }
-    $has = DB_getItem($_TABLES['revisions_baseline'],'sp_id',"sp_id='$idEscaped'");
-    if ($has !== '') { return true; }
-    return REVISIONS_baseline($id,$snap);
+    $exists = DB_query("SELECT sp_id FROM {$_TABLES['revisions_baseline']} WHERE sp_id='$idEscaped' LIMIT 1",1);
+    if ($exists && DB_numRows($exists) === 1) { return true; }
+    if (!REVISIONS_baseline($id,$snap)) { return false; }
+    // DB_query returning success is not sufficient: read back the durable baseline.
+    $confirmed = DB_query("SELECT content_hash FROM {$_TABLES['revisions_baseline']} WHERE sp_id='$idEscaped' LIMIT 1",1);
+    if (!$confirmed || DB_numRows($confirmed) !== 1) {
+        COM_errorLog('Revisions: tracking initialization could not be verified for page ' . $id);
+        return false;
+    }
+    $row = DB_fetchArray($confirmed);
+    $encoded = REVISIONS_encode($snap);
+    return $encoded !== false && isset($row['content_hash']) && $row['content_hash'] === hash('sha256', $encoded);
 }
 function plugin_itemsaved_revisions($id,$type,$old_id='',$sub_type='')
 {
