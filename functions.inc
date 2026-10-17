@@ -68,7 +68,13 @@ function REVISIONS_initialize($id)
 }
 function plugin_itemsaved_revisions($id,$type,$old_id='',$sub_type='')
 {
-    global $_TABLES, $_USER;
+    global $_USER;
+    $uid = isset($_USER['uid']) ? (int) $_USER['uid'] : 0;
+    REVISIONS_captureChange($id,$type,$old_id,$uid);
+}
+function REVISIONS_captureChange($id,$type,$old_id,$uid)
+{
+    global $_TABLES;
     if ($type !== 'staticpages' || $id === '') { return; }
     // Opt-in baseline must be initialized before modification.
     $from = $old_id !== '' ? $old_id : $id;
@@ -82,7 +88,7 @@ function plugin_itemsaved_revisions($id,$type,$old_id='',$sub_type='')
     if ($nowJson === false) { return; }
     $nowHash = hash('sha256',$nowJson);
     if ($old['content_hash'] !== $nowHash) {
-        $uid = isset($_USER['uid']) ? (int)$_USER['uid'] : 0;
+        $uid = (int) $uid;
         $json = DB_escapeString($old['snapshot_json']);
         $qSave = DB_query("INSERT INTO {$_TABLES['revisions_history']} (sp_id,actor_id,snapshot_json,content_hash,created_at) VALUES ('" . DB_escapeString($id) . "',$uid,'$json','" . DB_escapeString($old['content_hash']) . "',NOW())",1);
         if (!$qSave) { COM_errorLog('Revisions: history insert failed. Baseline not advanced.'); return; }
@@ -91,4 +97,17 @@ function plugin_itemsaved_revisions($id,$type,$old_id='',$sub_type='')
     if ($old_id !== '' && $old_id !== $id) {
         DB_query("DELETE FROM {$_TABLES['revisions_baseline']} WHERE sp_id='" . DB_escapeString($old_id) . "'",1);
     }
+}
+
+/**
+ * Read-only reconciliation trigger for a tracked page.
+ * Only used by an explicitly authorized administrator action. History author 0
+ * means the edit actor could not be established from this delayed scan.
+ */
+function REVISIONS_reconcilePage($id)
+{
+    $old = REVISIONS_snapshot($id);
+    if ($old === false) { return false; }
+    REVISIONS_captureChange($id, 'staticpages', '', 0);
+    return true;
 }
