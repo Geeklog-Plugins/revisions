@@ -123,9 +123,9 @@ if (isset($_GET['revision_id']) && ctype_digit((string) $_GET['revision_id'])) {
                 }
                 $oldSource = isset($old['sp_content']) ? (string)$old['sp_content'] : '';
                 $currentSource = is_array($current) && isset($current['sp_content']) ? (string)$current['sp_content'] : '';
-                $revisionDetail .= '</div><h4>Changed content lines</h4>'
+                $revisionDetail .= '<div class="revisions-compare-diff"><h4>Changed content lines</h4>'
                     . REVISIONS_ADMIN_lineDiff($oldSource, $currentSource)
-                    . '<div>';
+                    . '</div>';
                 $rawHtml = isset($old['sp_content']) ? (string) $old['sp_content'] : '';
                 $revisionDetail .= '</div>'
                     . '<h4>Archived HTML source — copy/paste</h4>'
