@@ -1,5 +1,5 @@
 <?php
-/* Revisions 0.1.1: Static Pages history pilot, PHP 5.6-compatible syntax. */
+/* Revisions 0.1.2: Static Pages history pilot, PHP 5.6-compatible syntax. */
 global $_CONF, $_TABLES, $_DB_table_prefix;
 $_TABLES['revisions_baseline'] = $_DB_table_prefix . 'revisions_baseline';
 $_TABLES['revisions_history'] = $_DB_table_prefix . 'revisions_history';
@@ -15,7 +15,7 @@ function plugin_cclabel_revisions()
     if (!SEC_hasRights('revisions.admin')) { return array(); }
     return array('Revisions', $_CONF['site_admin_url'] . '/plugins/revisions/index.php');
 }
-function plugin_chkVersion_revisions() { return '0.1.1'; }
+function plugin_chkVersion_revisions() { return '0.1.2'; }
 function plugin_upgrade_revisions() { return true; }
 function REVISIONS_fields()
 {
