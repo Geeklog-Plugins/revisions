@@ -16,3 +16,16 @@
 .revisions-line-added{background:rgba(27,128,60,.12);border-left:3px solid #228447}
 .revisions-line-removed{background:rgba(180,55,55,.12);border-left:3px solid #b34747}
 .revisions-line-diff code{font-size:inherit;white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* 0.2.0 pre-release: concise revision details with bounded source panes. */
+.revisions-detail{max-width:100%;min-width:0}
+.revisions-summary-field{margin:1rem 0 1.25rem}
+.revisions-summary-field h3{margin-bottom:.5rem}
+.revisions-summary-field label{display:block;font-weight:600;margin:.5rem 0 .25rem}
+.revisions-value{box-sizing:border-box;max-height:7rem;overflow:auto;border:1px solid #bbb;border-radius:.25rem;padding:.65rem;white-space:pre-wrap;overflow-wrap:anywhere}
+.revisions-source{display:block;box-sizing:border-box;width:100%;max-height:23rem;min-height:9rem;overflow:auto;resize:vertical;border:1px solid #bbb;padding:.75rem;font-family:monospace;white-space:pre;tab-size:4}
+.revisions-source--pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.revisions-detail-fold{border:1px solid #bbb;border-radius:.3rem;margin:1rem 0;padding:.6rem .85rem}
+.revisions-detail-fold>summary{cursor:pointer;font-weight:600;padding:.25rem;list-style:disclosure-closed}
+.revisions-detail-fold[open]>summary{margin-bottom:.85rem}
+.revisions-detail-fold>summary:focus-visible{outline:2px solid currentColor;outline-offset:3px}
