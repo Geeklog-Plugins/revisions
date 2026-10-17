@@ -43,28 +43,28 @@ jobs:
       - name: Package and validate
         run: |
           set -euo pipefail
-          grep -Eq "pi_version.*0[.]1[.]0" autoinstall.php
-          grep -Eq "return '0[.]1[.]0'" functions.inc
+          grep -Eq "pi_version.*0[.]1[.]1" autoinstall.php
+          grep -Eq "return '0[.]1[.]1'" functions.inc
           mkdir -p build/revisions/admin build/revisions/sql dist
           cp autoinstall.php functions.inc build/revisions/
           cp admin/index.php build/revisions/admin/
           cp sql/mysql_install.php build/revisions/sql/
-          (cd build && zip -r -q ../dist/revisions_0.1.0_2.2.2.zip revisions)
-          unzip -t dist/revisions_0.1.0_2.2.2.zip
-          test "$(unzip -Z1 dist/revisions_0.1.0_2.2.2.zip | cut -d/ -f1 | sort -u)" = "revisions"
+          (cd build && zip -r -q ../dist/revisions_0.1.1_2.2.2.zip revisions)
+          unzip -t dist/revisions_0.1.1_2.2.2.zip
+          test "$(unzip -Z1 dist/revisions_0.1.1_2.2.2.zip | cut -d/ -f1 | sort -u)" = "revisions"
           for f in autoinstall.php functions.inc admin/index.php sql/mysql_install.php; do
-            unzip -p dist/revisions_0.1.0_2.2.2.zip "revisions/$f" | cmp - "$f"
+            unzip -p dist/revisions_0.1.1_2.2.2.zip "revisions/$f" | cmp - "$f"
           done
-          if unzip -Z1 dist/revisions_0.1.0_2.2.2.zip | grep -E '(^|/)(\.git|\.github|tests|pilot|docs)/'; then
+          if unzip -Z1 dist/revisions_0.1.1_2.2.2.zip | grep -E '(^|/)(\.git|\.github|tests|pilot|docs)/'; then
             echo 'Development files found in archive'
             exit 1
           fi
-          sha256sum dist/revisions_0.1.0_2.2.2.zip > dist/SHA256SUMS
+          sha256sum dist/revisions_0.1.1_2.2.2.zip > dist/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
-          name: revisions_0.1.0_2.2.2
+          name: revisions_0.1.1_2.2.2
           path: |
-            dist/revisions_0.1.0_2.2.2.zip
+            dist/revisions_0.1.1_2.2.2.zip
             dist/SHA256SUMS
           if-no-files-found: error
           retention-days: 30
@@ -75,7 +75,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f dist/revisions_0.1.0_2.2.2.zip dist/SHA256SUMS
+          git add -f dist/revisions_0.1.1_2.2.2.zip dist/SHA256SUMS
           if git diff --cached --quiet; then
             echo "Archive unchanged; nothing to commit."
             exit 0
