@@ -13,3 +13,14 @@ function plugin_compatible_with_this_version_revisions($pi_name)
 {
     return version_compare(PHP_VERSION,'5.6.40','>=') && (!defined('VERSION') || version_compare(VERSION,'2.2.2','>='));
 }
+
+/**
+ * Geeklog 2.2.2 calls this after creating the plugin tables and registering it.
+ * Seed all eligible existing Static Pages so tracking is on from installation.
+ */
+function plugin_postinstall_revisions($pi_name)
+{
+    global $_CONF;
+    require_once $_CONF['path'] . 'plugins/revisions/functions.inc';
+    return REVISIONS_seedAllPages() !== false;
+}
