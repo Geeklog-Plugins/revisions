@@ -42,6 +42,46 @@ if (isset($_POST['action']) && $_POST['action'] === 'reconcile') {
             : 'Page is not eligible for tracking.';
     }
 }
+
+// Read-only revision detail: verify the current page ACL before revealing historical content.
+$revisionDetail = '';
+if (isset($_GET['revision_id']) && ctype_digit((string) $_GET['revision_id'])) {
+    $rid = (int) $_GET['revision_id'];
+    $res = DB_query("SELECT revision_id,sp_id,snapshot_json,content_hash,actor_id,created_at "
+        . "FROM {$_TABLES['revisions_history']} WHERE revision_id=$rid LIMIT 1",1);
+    if ($res && DB_numRows($res) === 1) {
+        $rev = DB_fetchArray($res);
+        $escapedId = DB_escapeString($rev['sp_id']);
+        $aclRes = DB_query("SELECT owner_id,group_id,perm_owner,perm_group,perm_members,perm_anon "
+            . "FROM {$_TABLES['staticpage']} WHERE sp_id='$escapedId' LIMIT 1",1);
+        if ($aclRes && DB_numRows($aclRes) === 1 && SEC_hasRights('staticpages.edit')
+            && REVISIONS_ADMIN_canEdit(DB_fetchArray($aclRes))) {
+            $old = json_decode($rev['snapshot_json'], true);
+            $current = REVISIONS_snapshot($rev['sp_id']);
+            if (is_array($old) && hash('sha256', $rev['snapshot_json']) === $rev['content_hash']) {
+                $revisionDetail .= '<section style="border:1px solid #ccc;padding:16px;margin:24px 0">'
+                    . '<h3>Revision #' . R_H($rid) . ' — read-only</h3>'
+                    . '<p>Page ' . R_H($rev['sp_id']) . ' · ' . R_H($rev['created_at']) . '</p>'
+                    . '<p>Historical source is escaped: HTML, PHP and autotags are never executed.</p>'
+                    . '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">';
+                foreach (array('sp_title'=>'Title','sp_content'=>'Page content','meta_description'=>'Meta description') as $field=>$label) {
+                    $oldValue = isset($old[$field]) ? (string)$old[$field] : '';
+                    $currentValue = is_array($current) && isset($current[$field]) ? (string)$current[$field] : '';
+                    $revisionDetail .= '<div><h4>' . R_H($label) . '</h4><strong>Archived version</strong>'
+                        . '<pre style="white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #ddd;padding:10px">'
+                        . R_H($oldValue) . '</pre><strong>Current version</strong>'
+                        . '<pre style="white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #ddd;padding:10px">'
+                        . R_H($currentValue) . '</pre></div>';
+                }
+                $revisionDetail .= '</div><p>No restore action is provided in this pilot.</p></section>';
+            } else {
+                $message = 'Archived snapshot could not be verified.';
+            }
+        } else {
+            $message = 'You are not allowed to view this page history.';
+        }
+    }
+}
 $out = '<h2>Revisions ' . R_H(plugin_chkVersion_revisions()) . ' — Static Pages pilot</h2><p>Read-only history. Initialize an existing simple Static Page BEFORE editing it. PHP/template pages are excluded. No restore function yet.</p>';
 if ($message !== '') { $out .= '<p><strong>' . R_H($message) . '</strong></p>'; }
 $token = SEC_createToken();
@@ -75,9 +115,11 @@ if ($tracked && DB_numRows($tracked) > 0) {
 } else {
     $out .= '<p><strong>No pages are being tracked yet.</strong> Add the exact existing Static Page ID above and verify the confirmation message. If the message reports an error, inspect Geeklog error.log for SQL details.</p>';
 }
+$out .= $revisionDetail;
 $out .= '<h3>Recent versions</h3><table><thead><tr><th>Revision</th><th>Page</th><th>Author</th><th>Date</th></tr></thead><tbody>';
 if ($q) { while ($r=DB_fetchArray($q)) {
-    $out .= '<tr><td>'.R_H($r['revision_id']).'</td><td>'.R_H($r['sp_id']).'</td><td>'.R_H($r['actor_id']).'</td><td>'.R_H($r['created_at']).'</td></tr>';
+    $detailUrl = $_CONF['site_admin_url'] . '/plugins/revisions/index.php?revision_id=' . (int) $r['revision_id'];
+    $out .= '<tr><td><a href="' . R_H($detailUrl) . '">#'.R_H($r['revision_id']).' — View</a></td><td>'.R_H($r['sp_id']).'</td><td>'.R_H($r['actor_id']).'</td><td>'.R_H($r['created_at']).'</td></tr>';
 } }
-$out .= '</tbody></table><p>Snapshots are stored in database. This experimental admin view shows metadata only.</p>';
+$out .= '</tbody></table><p>Snapshots are stored in database. Select View to compare archived source and current source.</p>';
 COM_output(COM_createHTMLDocument($out,array('pagetitle'=>'Revisions')));
