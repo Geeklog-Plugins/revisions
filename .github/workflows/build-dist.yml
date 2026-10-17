@@ -6,7 +6,11 @@ on:
     paths: ['autoinstall.php', 'functions.inc', 'admin/**', 'sql/**', '.github/workflows/build-dist.yml']
   pull_request:
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: revisions-dist-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -33,6 +37,9 @@ jobs:
     needs: lint
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          ref: ${{ github.head_ref || github.ref_name }}
       - name: Package and validate
         run: |
           set -euo pipefail
@@ -61,3 +68,17 @@ jobs:
             dist/SHA256SUMS
           if-no-files-found: error
           retention-days: 30
+      - name: Commit generated archive to development branch
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop-m0-capture-contract'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f dist/revisions_0.1.0_2.2.2.zip dist/SHA256SUMS
+          if git diff --cached --quiet; then
+            echo "Archive unchanged; nothing to commit."
+            exit 0
+          fi
+          git commit -m "build: update installable Revisions archive [skip ci]"
+          git push origin HEAD:develop-m0-capture-contract
