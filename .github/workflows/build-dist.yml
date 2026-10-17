@@ -1,0 +1,63 @@
+name: Build installable Revisions ZIP
+on:
+  workflow_dispatch:
+  push:
+    branches: [develop-m0-capture-contract]
+    paths: ['autoinstall.php', 'functions.inc', 'admin/**', 'sql/**', '.github/workflows/build-dist.yml']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['5.6', '8.1', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: none
+          coverage: none
+      - name: Lint plugin sources
+        run: |
+          set -euo pipefail
+          for f in autoinstall.php functions.inc admin/index.php sql/mysql_install.php; do
+            test -s "$f"
+            php -l "$f"
+          done
+  build:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package and validate
+        run: |
+          set -euo pipefail
+          grep -Eq "pi_version.*0[.]1[.]0" autoinstall.php
+          grep -Eq "return '0[.]1[.]0'" functions.inc
+          mkdir -p build/revisions/admin build/revisions/sql dist
+          cp autoinstall.php functions.inc build/revisions/
+          cp admin/index.php build/revisions/admin/
+          cp sql/mysql_install.php build/revisions/sql/
+          (cd build && zip -r -q ../dist/revisions_0.1.0_2.2.2.zip revisions)
+          unzip -t dist/revisions_0.1.0_2.2.2.zip
+          test "$(unzip -Z1 dist/revisions_0.1.0_2.2.2.zip | cut -d/ -f1 | sort -u)" = "revisions"
+          for f in autoinstall.php functions.inc admin/index.php sql/mysql_install.php; do
+            unzip -p dist/revisions_0.1.0_2.2.2.zip "revisions/$f" | cmp - "$f"
+          done
+          if unzip -Z1 dist/revisions_0.1.0_2.2.2.zip | grep -E '(^|/)(\.git|\.github|tests|pilot|docs)/'; then
+            echo 'Development files found in archive'
+            exit 1
+          fi
+          sha256sum dist/revisions_0.1.0_2.2.2.zip > dist/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: revisions_0.1.0_2.2.2
+          path: |
+            dist/revisions_0.1.0_2.2.2.zip
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30
