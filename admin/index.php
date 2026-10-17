@@ -104,29 +104,23 @@ if (isset($_GET['revision_id']) && ctype_digit((string) $_GET['revision_id'])) {
             $old = json_decode($rev['snapshot_json'], true);
             $current = REVISIONS_snapshot($rev['sp_id']);
             if (is_array($old) && hash('sha256', $rev['snapshot_json']) === $rev['content_hash']) {
-                $revisionDetail .= '<section style="border:1px solid #ccc;padding:16px;margin:24px 0">'
-                    . '<h3>Revision #' . R_H($rid) . ' — read-only</h3>'
-                    . '<p>Page ' . R_H($rev['sp_id']) . ' · ' . R_H($rev['created_at']) . '</p>'
-                    . '<p>Historical source is escaped: HTML, PHP and autotags are never executed.</p>'
-                    . '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">';
-                foreach (array('sp_title'=>'Title','sp_content'=>'Page content','meta_description'=>'Meta description') as $field=>$label) {
+                $revisionDetail .= '<section class="revisions-detail"><h2>Revision #' . R_H($rid) . '</h2>'
+                    . '<p>' . R_H(REVISIONS_ADMIN_pageTitle($rev['sp_id'])) . ' · ' . R_H($rev['created_at']) . '</p>'
+                    . '<p>Archived fields — source values, not rendered HTML.</p>';
+                foreach (array('sp_title'=>'Title','meta_description'=>'Meta description') as $field=>$label) {
                     $oldValue = isset($old[$field]) ? (string)$old[$field] : '';
                     $currentValue = is_array($current) && isset($current[$field]) ? (string)$current[$field] : '';
-                    $changed = ($oldValue !== $currentValue);
-                    $revisionDetail .= '<div class="revisions-compare-field' . ($changed ? ' revisions-compare-field--changed' : '') . '">'
-                        . '<h4>' . R_H($label) . ' <small>' . ($changed ? 'Changed' : 'Unchanged') . '</small></h4>'
-                        . '<strong>Archived version</strong>'
-                        . '<pre style="white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #ddd;padding:10px">'
-                        . R_H($oldValue) . '</pre><strong>Current version</strong>'
-                        . '<pre style="white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #ddd;padding:10px">'
-                        . R_H($currentValue) . '</pre></div>';
+                    $revisionDetail .= '<div class="revisions-summary-field"><h3>' . R_H($label) . '</h3>'
+                        . '<label>Archived</label><div class="revisions-value">' . R_H($oldValue) . '</div>'
+                        . '<label>Current</label><div class="revisions-value">' . R_H($currentValue) . '</div></div>';
                 }
-                $oldSource = isset($old['sp_content']) ? (string)$old['sp_content'] : '';
+                $rawHtml = isset($old['sp_content']) ? (string)$old['sp_content'] : '';
                 $currentSource = is_array($current) && isset($current['sp_content']) ? (string)$current['sp_content'] : '';
-                $revisionDetail .= '<div class="revisions-compare-diff"><h4>Changed content lines</h4>'
-                    . REVISIONS_ADMIN_lineDiff($oldSource, $currentSource)
-                    . '</div>';
-                // Restore preflight is informational: NEVER update a provider table here.
+                $revisionDetail .= '<h3>Archived HTML — copy and paste</h3>'
+                    . '<p>Copy this source into the Static Pages editor in HTML/source mode. No scripts or autotags run here.</p>'
+                    . '<textarea readonly rows="14" spellcheck="false" aria-label="Archived HTML source" class="revisions-source">'
+                    . R_H($rawHtml) . '</textarea>';
+                $revisionDetail .= '<details class="revisions-detail-fold"><summary>Revision history and restore readiness</summary>';
                 $currentEncoded = is_array($current) ? REVISIONS_encode($current) : false;
                 $trackedHash = false;
                 $baselineSql = DB_escapeString($rev['sp_id']);
@@ -137,35 +131,19 @@ if (isset($_GET['revision_id']) && ctype_digit((string) $_GET['revision_id'])) {
                 }
                 $sourceMatches = $currentEncoded !== false && $trackedHash !== false
                     && hash_equals($trackedHash, hash('sha256', $currentEncoded));
-                $revisionDetail .= '<div class="revisions-restore-preflight" role="note">'
-                    . '<h4>Restore readiness — preview only</h4>'
-                    . '<p>Automatic restoration remains disabled. This check never changes the page.</p>';
                 if ($current === false) {
-                    $revisionDetail .= '<p>Unavailable: current page is missing or uses PHP/templates.</p>';
+                    $revisionDetail .= '<p>Current page unavailable or ineligible.</p>';
                 } elseif (!$sourceMatches) {
-                    $revisionDetail .= '<p>Not ready: the current page differs from its tracked baseline. '
-                        . 'Check changes first and review the new revision before considering restoration.</p>';
-                } elseif ($old === $current) {
-                    $revisionDetail .= '<p>No action needed: archived and current editorial fields match.</p>';
+                    $revisionDetail .= '<p>Current content differs from baseline; inspect before restoration.</p>';
                 } else {
-                    $revisionDetail .= '<p>Preview checks passed: the snapshot checksum is valid, '
-                        . 'the current page is available, and the tracked baseline matches it.</p>'
-                        . '<p>For now, use the archived HTML source below to restore manually in the '
-                        . 'Static Pages editor. The current content will be saved in history by the normal save hook.</p>';
+                    $revisionDetail .= '<p>Current content matches the tracked baseline.</p>';
                 }
-                $revisionDetail .= '</div>';
-                $rawHtml = isset($old['sp_content']) ? (string) $old['sp_content'] : '';
-                $revisionDetail .= '</div>'
-                    . '<h4>Archived HTML source — copy/paste</h4>'
-                    . '<p>Select and copy the HTML source below to paste into the Static Pages editor in HTML/source mode. '
-                    . 'Nothing is executed or restored automatically.</p>'
-                    . '<textarea readonly rows="12" spellcheck="false" '
-                    . 'aria-label="Archived HTML source" '
-                    . 'style="box-sizing:border-box;width:100%;font-family:monospace;white-space:pre;'
-                    . 'padding:12px;min-height:160px;overflow:auto">'
-                    . R_H($rawHtml) . '</textarea>'
-                    . '<p><small>Original HTML and autotags are preserved; attached images and media are not included.</small></p>'
-                    . '<p>No restore action is provided in this pilot.</p></section>';
+                $revisionDetail .= '<p>Automatic restoration is not available in this preview.</p></details>';
+                $revisionDetail .= '<details class="revisions-detail-fold"><summary>Changed lines</summary>'
+                    . REVISIONS_ADMIN_lineDiff($rawHtml, $currentSource) . '</details>';
+                $revisionDetail .= '<details class="revisions-detail-fold"><summary>Current version</summary>'
+                    . '<pre class="revisions-source revisions-source--pre">' . R_H($currentSource) . '</pre>'
+                    . '</details></section>';
             } else {
                 $message = 'Archived snapshot could not be verified.';
             }
@@ -201,19 +179,16 @@ if ($section === 'home') {
         . R_H($revsNumber['cnt']) . '</strong> archived revisions.</p>'
         . '<p><a href="' . R_H($base . '?section=pages') . '">Manage tracked pages</a> · '
         . '<a href="' . R_H($base . '?section=history') . '">Browse history</a></p>'
-        . '<h3>Getting started</h3><ol><li>Open Tracked pages and initialize an existing simple Static Page.</li>'
-        . '<li>Edit that page and save your changes in Geeklog.</li>'
+        . '<h3>Getting started</h3><ol><li>Open Tracked pages to confirm automatic enrollment.</li>'
+        . '<li>Edit any eligible Static Page and save your changes in Geeklog.</li>'
         . '<li>Open History to inspect and copy the previous source.</li></ol>'
         . '<p>PHP and template Static Pages are excluded. No automatic restoration or asset backup is included.</p>';
 } elseif ($section === 'pages') {
-    $out .= '<h2>Start tracking a page</h2><p>Use the exact Static Page ID. Tracking begins from the current saved state, not past edits.</p>';
-    $token = SEC_createToken();
-    $out .= '<form class="revisions-track-form" method="post" action="' . R_H($base) . '">'
-        . '<label for="revisions-sp-id">Static Page ID</label>'
-        . '<input id="revisions-sp-id" name="sp_id" maxlength="128" required>'
-        . '<input type="hidden" name="action" value="baseline">'
-        . '<input type="hidden" name="' . R_H(CSRF_TOKEN) . '" value="' . R_H($token) . '">'
-        . '<button type="submit">Start tracking</button></form>';
+    $newPages = REVISIONS_seedAllPages();
+    $out .= '<h2>Automatically tracked Static Pages</h2>'
+        . '<p>All existing eligible Static Pages are enrolled automatically. PHP and template pages are excluded.</p>';
+    if ($newPages === false) { $out .= '<p>Automatic discovery failed; consult Geeklog error.log.</p>'; }
+    else { $out .= '<p>Newly initialized on this visit: ' . (int)$newPages . '.</p>'; }
     $tracked = DB_query("SELECT sp_id,updated_at FROM {$_TABLES['revisions_baseline']} ORDER BY updated_at DESC LIMIT 50", 1);
 $out .= '<h2>Tracked pages</h2><p>Check changes compares the current page with the last saved baseline.</p>';
 $out .= '<p><small>Tracking table: ' . R_H($_TABLES['revisions_baseline']) . '; History table: ' . R_H($_TABLES['revisions_history']) . '</small></p>';
@@ -230,20 +205,21 @@ if ($tracked && DB_numRows($tracked) > 0) {
     }
     $out .= '</tbody></table>';
 } else {
-    $out .= '<p><strong>No pages are being tracked yet.</strong> Add the exact existing Static Page ID above and verify the confirmation message. If the message reports an error, inspect Geeklog error.log for SQL details.</p>';
+    $out .= '<p><strong>No pages are being tracked yet.</strong> No eligible pages are tracked yet. Check the Static Pages plugin and Geeklog error.log.</p>';
 }
 } elseif ($section === 'history') {
     $q = DB_query("SELECT revision_id,sp_id,actor_id,created_at FROM {$_TABLES['revisions_history']} ORDER BY revision_id DESC LIMIT 50",1);
     $out .= $revisionDetail;
-    $out .= '<h3>Revision history</h3><table><thead><tr><th>Revision</th><th>Page</th><th>Author</th><th>Date</th></tr></thead><tbody>';
+    $out .= (isset($_GET['revision_id']) ? '<details class="revisions-detail-fold"><summary>Revision history — all pages</summary>' : '') . '<h3>Revision history</h3><table><thead><tr><th>Revision</th><th>Page</th><th>Author</th><th>Date</th></tr></thead><tbody>';
 if ($q) { while ($r=DB_fetchArray($q)) {
     $detailUrl = $_CONF['site_admin_url'] . '/plugins/revisions/index.php?revision_id=' . (int) $r['revision_id'];
     $out .= '<tr><td><a href="' . R_H($detailUrl) . '">#'.R_H($r['revision_id']).' — View</a></td><td>'.R_H($r['sp_id']).'</td><td>'.R_H($r['actor_id']).'</td><td>'.R_H($r['created_at']).'</td></tr>';
 } }
 $out .= '</tbody></table><p>Snapshots are stored in database. Select View to compare archived source and current source.</p>';
+    if (isset($_GET['revision_id'])) { $out .= '</details>'; }
 
 } else {
-    $out .= '<h2>Help</h2><p><strong>How tracking works:</strong> initialize a simple Static Page, edit and save it, then look in History. An archive contains the earlier stored source.</p>'
+    $out .= '<h2>Help</h2><p><strong>How tracking works:</strong> all eligible existing Static Pages are initialized automatically during upgrade and when opening Tracked pages; newly created pages start tracking on their first save. Edit and save, then look in History. An archive contains the earlier stored source.</p>'
         . '<p><strong>Missing updates:</strong> use Check changes in Tracked pages. A recovered change has author ID 0 because the original editor is unknown.</p>'
         . '<p><strong>HTML source:</strong> select View in History, then copy the escaped source from the read-only field into the Geeklog HTML/source editor.</p>'
         . '<p><strong>Limitations:</strong> PHP/template pages, file recovery, automatic restore and multi-writer atomicity are not supported in this pilot.</p>'
