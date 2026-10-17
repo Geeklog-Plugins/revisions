@@ -15,8 +15,46 @@ function plugin_cclabel_revisions()
     if (!SEC_hasRights('revisions.admin')) { return array(); }
     return array('Revisions', $_CONF['site_admin_url'] . '/plugins/revisions/index.php');
 }
-function plugin_chkVersion_revisions() { return '0.1.3'; }
-function plugin_upgrade_revisions() { return true; }
+function plugin_chkVersion_revisions()
+{
+    global $_CONF;
+    require_once $_CONF['path'] . 'plugins/revisions/autoinstall.php';
+    $spec = plugin_autoinstall_revisions('revisions');
+    return $spec['info']['pi_version'];
+}
+/**
+ * Upgrade metadata only when required history storage is present.
+ * 0.1.0 -> 0.1.4 introduces no database schema changes.
+ */
+function plugin_upgrade_revisions()
+{
+    global $_CONF, $_TABLES;
+    require_once $_CONF['path'] . 'plugins/revisions/autoinstall.php';
+    if (!plugin_compatible_with_this_version_revisions('revisions')) {
+        COM_errorLog('Revisions: incompatible Geeklog/PHP version during upgrade.');
+        return false;
+    }
+    if (!DB_checkTableExists('revisions_baseline') ||
+        !DB_checkTableExists('revisions_history')) {
+        COM_errorLog('Revisions: required history tables missing; upgrade aborted.');
+        return false;
+    }
+    $spec = plugin_autoinstall_revisions('revisions');
+    $version = DB_escapeString($spec['info']['pi_version']);
+    $gl = DB_escapeString($spec['info']['pi_gl_version']);
+    $sql = "UPDATE {$_TABLES['plugins']} SET pi_version='$version', "
+         . "pi_gl_version='$gl' WHERE pi_name='revisions'";
+    if (!DB_query($sql, 1)) {
+        COM_errorLog('Revisions: failed updating Geeklog plugin version metadata.');
+        return false;
+    }
+    $stored = DB_getItem($_TABLES['plugins'], 'pi_version', "pi_name='revisions'");
+    if ($stored !== $spec['info']['pi_version']) {
+        COM_errorLog('Revisions: stored plugin version differs after upgrade.');
+        return false;
+    }
+    return true;
+}
 function REVISIONS_fields()
 {
     return array('sp_title','sp_page_title','sp_content','page_data','postmode','meta_description',
