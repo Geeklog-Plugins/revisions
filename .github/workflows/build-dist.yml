@@ -71,6 +71,20 @@ jobs:
             dist/SHA256SUMS
           if-no-files-found: error
           retention-days: 30
+      - name: Publish GitHub v0.2.0 pre-release
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop-m0-capture-contract'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view v0.2.0 >/dev/null 2>&1; then
+            gh release upload v0.2.0 dist/revisions_0.2.0_2.2.2.zip dist/SHA256SUMS --clobber
+          else
+            gh release create v0.2.0 dist/revisions_0.2.0_2.2.2.zip dist/SHA256SUMS \
+              --target "${GITHUB_SHA}" --prerelease --title "Revisions 0.2.0 pre-release" \
+              --notes "Concept preview for Geeklog 2.2.2: eligible Static Pages tracked by default, source history, archived HTML copy/paste, and read-only comparison. Restoration is not implemented. PHP and template Static Pages are excluded."
+          fi
       - name: Commit generated archive to development branch
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop-m0-capture-contract'
         shell: bash
