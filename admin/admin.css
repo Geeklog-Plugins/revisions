@@ -1,1 +1,9 @@
 .plugin-admin-nav{margin:0 0 1.25rem}.plugin-admin-nav__primary{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}.plugin-admin-nav__item{display:inline-flex;align-items:center;justify-content:center;min-height:2.4rem;padding:.5rem .8rem;border:1px solid currentColor;border-radius:.35rem;color:inherit;text-decoration:none}.plugin-admin-nav__item.is-active{font-weight:700;box-shadow:inset 0 -2px 0 currentColor}.revisions-message{padding:.8rem;border:1px solid currentColor}.revisions-track-form{display:flex;flex-wrap:wrap;align-items:center;gap:.75rem;margin:1rem 0 2rem}.revisions-track-form input{width:min(100%,360px);min-width:190px;padding:.6rem}.revisions-track-form button{padding:.6rem 1rem}.revisions-track-form label{font-weight:600}table{max-width:100%}pre{white-space:pre-wrap;overflow-wrap:anywhere}@media(max-width:640px){.plugin-admin-nav__primary{align-items:stretch;flex-direction:column}.plugin-admin-nav__item{width:100%;box-sizing:border-box}.revisions-track-form{align-items:stretch;flex-direction:column}.revisions-track-form input,.revisions-track-form button{width:100%;box-sizing:border-box}}
+/* Keep navigation anchors button-like across Eclipse, Denim and other themes. */
+.plugin-admin-nav .plugin-admin-nav__item:link,
+.plugin-admin-nav .plugin-admin-nav__item:visited,
+.plugin-admin-nav .plugin-admin-nav__item:hover,
+.plugin-admin-nav .plugin-admin-nav__item:focus,
+.plugin-admin-nav .plugin-admin-nav__item:active { text-decoration: none !important; color: inherit; }
+.plugin-admin-nav .plugin-admin-nav__item:hover { background: rgba(127,127,127,.12); }
+.plugin-admin-nav .plugin-admin-nav__item:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
