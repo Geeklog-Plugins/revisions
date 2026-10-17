@@ -29,7 +29,18 @@ if (isset($_POST['action']) && $_POST['action'] === 'baseline') {
 }
 $out = '<h2>Revisions 0.1.0 — Static Pages pilot</h2><p>Read-only history. Initialize an existing simple Static Page BEFORE editing it. PHP/template pages are excluded. No restore function yet.</p>';
 if ($message !== '') { $out .= '<p><strong>' . R_H($message) . '</strong></p>'; }
-$out .= '<form method="post"><label>Static Page ID <input name="sp_id" required></label><input type="hidden" name="action" value="baseline">' . SEC_createToken() . '<button type="submit">Start tracking</button></form>';
+$token = SEC_createToken();
+$out .= '<form method="post" action="' . R_H($_CONF['site_admin_url'] . '/plugins/revisions/index.php') . '">'
+    . '<div style="display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:16px 0 24px">'
+    . '<label for="revisions-sp-id" style="display:flex;flex-direction:column;gap:6px;font-weight:600">'
+    . 'Static Page ID'
+    . '<input id="revisions-sp-id" type="text" name="sp_id" maxlength="128" '
+    . 'style="width:min(100%,420px);min-width:260px;padding:9px" required>'
+    . '</label>'
+    . '<input type="hidden" name="action" value="baseline">'
+    . '<input type="hidden" name="' . R_H(CSRF_TOKEN) . '" value="' . R_H($token) . '">'
+    . '<button type="submit" style="padding:10px 18px">Start tracking</button>'
+    . '</div></form>';
 $q = DB_query("SELECT revision_id,sp_id,actor_id,created_at FROM {$_TABLES['revisions_history']} ORDER BY revision_id DESC LIMIT 50",1);
 $out .= '<h3>Recent versions</h3><table><thead><tr><th>Revision</th><th>Page</th><th>Author</th><th>Date</th></tr></thead><tbody>';
 if ($q) { while ($r=DB_fetchArray($q)) {
