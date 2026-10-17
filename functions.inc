@@ -39,6 +39,11 @@ function plugin_upgrade_revisions()
         COM_errorLog('Revisions: required history tables missing; upgrade aborted.');
         return false;
     }
+    // Initialize every existing eligible page before advertising upgrade success.
+    if (REVISIONS_seedAllPages() === false) {
+        COM_errorLog('Revisions: auto-enrollment failed; upgrade not marked complete.');
+        return false;
+    }
     $spec = plugin_autoinstall_revisions('revisions');
     $version = DB_escapeString($spec['info']['pi_version']);
     $gl = DB_escapeString($spec['info']['pi_gl_version']);
@@ -53,8 +58,6 @@ function plugin_upgrade_revisions()
         COM_errorLog('Revisions: stored plugin version differs after upgrade.');
         return false;
     }
-    // Seed all existing eligible pages during upgrades, without resetting baselines.
-    REVISIONS_seedAllPages();
     return true;
 }
 function REVISIONS_seedAllPages()
