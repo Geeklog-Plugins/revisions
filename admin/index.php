@@ -42,7 +42,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'reconcile') {
             : 'Page is not eligible for tracking.';
     }
 }
-$out = '<h2>Revisions 0.1.1 — Static Pages pilot</h2><p>Read-only history. Initialize an existing simple Static Page BEFORE editing it. PHP/template pages are excluded. No restore function yet.</p>';
+$out = '<h2>Revisions ' . R_H(plugin_chkVersion_revisions()) . ' — Static Pages pilot</h2><p>Read-only history. Initialize an existing simple Static Page BEFORE editing it. PHP/template pages are excluded. No restore function yet.</p>';
 if ($message !== '') { $out .= '<p><strong>' . R_H($message) . '</strong></p>'; }
 $token = SEC_createToken();
 $out .= '<form method="post" action="' . R_H($_CONF['site_admin_url'] . '/plugins/revisions/index.php') . '">'
@@ -59,6 +59,7 @@ $out .= '<form method="post" action="' . R_H($_CONF['site_admin_url'] . '/plugin
 $q = DB_query("SELECT revision_id,sp_id,actor_id,created_at FROM {$_TABLES['revisions_history']} ORDER BY revision_id DESC LIMIT 50",1);
 $tracked = DB_query("SELECT sp_id,updated_at FROM {$_TABLES['revisions_baseline']} ORDER BY updated_at DESC LIMIT 50", 1);
 $out .= '<h3>Tracked pages</h3><p>Use Check changes to recover saves not recorded by the automatic callback.</p>';
+$out .= '<p><small>Tracking table: ' . R_H($_TABLES['revisions_baseline']) . '; History table: ' . R_H($_TABLES['revisions_history']) . '</small></p>';
 if ($tracked && DB_numRows($tracked) > 0) {
     $out .= '<table><thead><tr><th>Page ID</th><th>Last tracking update</th><th>Check changes</th></tr></thead><tbody>';
     while ($t = DB_fetchArray($tracked)) {
@@ -72,7 +73,7 @@ if ($tracked && DB_numRows($tracked) > 0) {
     }
     $out .= '</tbody></table>';
 } else {
-    $out .= '<p>No pages are being tracked yet.</p>';
+    $out .= '<p><strong>No pages are being tracked yet.</strong> Add the exact existing Static Page ID above and verify the confirmation message. If the message reports an error, inspect Geeklog error.log for SQL details.</p>';
 }
 $out .= '<h3>Recent versions</h3><table><thead><tr><th>Revision</th><th>Page</th><th>Author</th><th>Date</th></tr></thead><tbody>';
 if ($q) { while ($r=DB_fetchArray($q)) {
