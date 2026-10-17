@@ -126,6 +126,34 @@ if (isset($_GET['revision_id']) && ctype_digit((string) $_GET['revision_id'])) {
                 $revisionDetail .= '<div class="revisions-compare-diff"><h4>Changed content lines</h4>'
                     . REVISIONS_ADMIN_lineDiff($oldSource, $currentSource)
                     . '</div>';
+                // Restore preflight is informational: NEVER update a provider table here.
+                $currentEncoded = is_array($current) ? REVISIONS_encode($current) : false;
+                $trackedHash = false;
+                $baselineSql = DB_escapeString($rev['sp_id']);
+                $baselineCheck = DB_query("SELECT content_hash FROM {$_TABLES['revisions_baseline']} WHERE sp_id='$baselineSql' LIMIT 1",1);
+                if ($baselineCheck && DB_numRows($baselineCheck) === 1) {
+                    $baselineRow = DB_fetchArray($baselineCheck);
+                    $trackedHash = isset($baselineRow['content_hash']) ? $baselineRow['content_hash'] : false;
+                }
+                $sourceMatches = $currentEncoded !== false && $trackedHash !== false
+                    && hash_equals($trackedHash, hash('sha256', $currentEncoded));
+                $revisionDetail .= '<div class="revisions-restore-preflight" role="note">'
+                    . '<h4>Restore readiness — preview only</h4>'
+                    . '<p>Automatic restoration remains disabled. This check never changes the page.</p>';
+                if ($current === false) {
+                    $revisionDetail .= '<p>Unavailable: current page is missing or uses PHP/templates.</p>';
+                } elseif (!$sourceMatches) {
+                    $revisionDetail .= '<p>Not ready: the current page differs from its tracked baseline. '
+                        . 'Check changes first and review the new revision before considering restoration.</p>';
+                } elseif ($old === $current) {
+                    $revisionDetail .= '<p>No action needed: archived and current editorial fields match.</p>';
+                } else {
+                    $revisionDetail .= '<p>Preview checks passed: the snapshot checksum is valid, '
+                        . 'the current page is available, and the tracked baseline matches it.</p>'
+                        . '<p>For now, use the archived HTML source below to restore manually in the '
+                        . 'Static Pages editor. The current content will be saved in history by the normal save hook.</p>';
+                }
+                $revisionDetail .= '</div>';
                 $rawHtml = isset($old['sp_content']) ? (string) $old['sp_content'] : '';
                 $revisionDetail .= '</div>'
                     . '<h4>Archived HTML source — copy/paste</h4>'
