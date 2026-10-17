@@ -73,7 +73,18 @@ if (isset($_GET['revision_id']) && ctype_digit((string) $_GET['revision_id'])) {
                         . '<pre style="white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #ddd;padding:10px">'
                         . R_H($currentValue) . '</pre></div>';
                 }
-                $revisionDetail .= '</div><p>No restore action is provided in this pilot.</p></section>';
+                $rawHtml = isset($old['sp_content']) ? (string) $old['sp_content'] : '';
+                $revisionDetail .= '</div>'
+                    . '<h4>Archived HTML source — copy/paste</h4>'
+                    . '<p>Select and copy the HTML source below to paste into the Static Pages editor in HTML/source mode. '
+                    . 'Nothing is executed or restored automatically.</p>'
+                    . '<textarea readonly rows="12" spellcheck="false" '
+                    . 'aria-label="Archived HTML source" '
+                    . 'style="box-sizing:border-box;width:100%;font-family:monospace;white-space:pre;'
+                    . 'padding:12px;min-height:160px;overflow:auto">'
+                    . R_H($rawHtml) . '</textarea>'
+                    . '<p><small>Original HTML and autotags are preserved; attached images and media are not included.</small></p>'
+                    . '<p>No restore action is provided in this pilot.</p></section>';
             } else {
                 $message = 'Archived snapshot could not be verified.';
             }
