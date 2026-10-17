@@ -120,7 +120,19 @@ if (isset($_GET['revision_id']) && ctype_digit((string) $_GET['revision_id'])) {
                     . '<p>Copy this source into the Static Pages editor in HTML/source mode. No scripts or autotags run here.</p>'
                     . '<textarea readonly rows="14" spellcheck="false" aria-label="Archived HTML source" class="revisions-source">'
                     . R_H($rawHtml) . '</textarea>';
-                $revisionDetail .= '<details class="revisions-detail-fold"><summary>Revision history and restore readiness</summary>';
+                $revisionDetail .= '<details class="revisions-detail-fold"><summary>Revision history</summary>';
+                $historyId = DB_escapeString($rev['sp_id']);
+                $historyRows = DB_query("SELECT revision_id,created_at FROM {$_TABLES['revisions_history']} WHERE sp_id='$historyId' ORDER BY revision_id DESC LIMIT 50",1);
+                if ($historyRows) {
+                    $revisionDetail .= '<ul>';
+                    while ($historyRow = DB_fetchArray($historyRows)) {
+                        $historyUrl = $_CONF['site_admin_url'] . '/plugins/revisions/index.php?revision_id=' . (int)$historyRow['revision_id'];
+                        $revisionDetail .= '<li><a href="' . R_H($historyUrl) . '">Revision #' . (int)$historyRow['revision_id'] . '</a> — '
+                            . R_H($historyRow['created_at']) . '</li>';
+                    }
+                    $revisionDetail .= '</ul>';
+                }
+                $revisionDetail .= '<h4>Restore readiness</h4>';
                 $currentEncoded = is_array($current) ? REVISIONS_encode($current) : false;
                 $trackedHash = false;
                 $baselineSql = DB_escapeString($rev['sp_id']);
@@ -210,13 +222,15 @@ if ($tracked && DB_numRows($tracked) > 0) {
 } elseif ($section === 'history') {
     $q = DB_query("SELECT revision_id,sp_id,actor_id,created_at FROM {$_TABLES['revisions_history']} ORDER BY revision_id DESC LIMIT 50",1);
     $out .= $revisionDetail;
-    $out .= (isset($_GET['revision_id']) ? '<details class="revisions-detail-fold"><summary>Revision history — all pages</summary>' : '') . '<h3>Revision history</h3><table><thead><tr><th>Revision</th><th>Page</th><th>Author</th><th>Date</th></tr></thead><tbody>';
+    if (!isset($_GET['revision_id'])) {
+    $out .= '<h3>Revision history</h3><table><thead><tr><th>Revision</th><th>Page</th><th>Author</th><th>Date</th></tr></thead><tbody>';
 if ($q) { while ($r=DB_fetchArray($q)) {
     $detailUrl = $_CONF['site_admin_url'] . '/plugins/revisions/index.php?revision_id=' . (int) $r['revision_id'];
     $out .= '<tr><td><a href="' . R_H($detailUrl) . '">#'.R_H($r['revision_id']).' — View</a></td><td>'.R_H($r['sp_id']).'</td><td>'.R_H($r['actor_id']).'</td><td>'.R_H($r['created_at']).'</td></tr>';
 } }
 $out .= '</tbody></table><p>Snapshots are stored in database. Select View to compare archived source and current source.</p>';
-    if (isset($_GET['revision_id'])) { $out .= '</details>'; }
+
+    }
 
 } else {
     $out .= '<h2>Help</h2><p><strong>How tracking works:</strong> all eligible existing Static Pages are initialized automatically during upgrade and when opening Tracked pages; newly created pages start tracking on their first save. Edit and save, then look in History. An archive contains the earlier stored source.</p>'
