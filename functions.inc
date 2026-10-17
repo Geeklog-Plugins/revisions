@@ -1,5 +1,5 @@
 <?php
-/* Revisions 0.1.3: Static Pages history pilot, PHP 5.6-compatible syntax. */
+/* Revisions 0.1.4: Static Pages history pilot, PHP 5.6-compatible syntax. */
 global $_CONF, $_TABLES, $_DB_table_prefix;
 $_TABLES['revisions_baseline'] = $_DB_table_prefix . 'revisions_baseline';
 $_TABLES['revisions_history'] = $_DB_table_prefix . 'revisions_history';
