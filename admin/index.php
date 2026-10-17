@@ -161,7 +161,6 @@ if ($tracked && DB_numRows($tracked) > 0) {
 } else {
     $out .= '<p><strong>No pages are being tracked yet.</strong> Add the exact existing Static Page ID above and verify the confirmation message. If the message reports an error, inspect Geeklog error.log for SQL details.</p>';
 }
-}
 } elseif ($section === 'history') {
     $q = DB_query("SELECT revision_id,sp_id,actor_id,created_at FROM {$_TABLES['revisions_history']} ORDER BY revision_id DESC LIMIT 50",1);
     $out .= $revisionDetail;
