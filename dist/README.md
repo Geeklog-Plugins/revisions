@@ -1,9 +1,15 @@
-# dist — GitHub Actions build artifacts
+# dist — Automatically generated installable ZIP
 
-The source repository tracks this directory through README.md. The installable ZIP is generated in `dist/` **during the GitHub Actions run** and uploaded as a workflow artifact, not committed as a binary.
+On each relevant push to `develop-m0-capture-contract`, GitHub Actions validates the plugin and **commits the generated ZIP and its SHA256SUMS into this tracked directory**:
 
-Open [Actions: Build installable Revisions ZIP](https://github.com/hostellerie/revisions/actions/workflows/build-dist.yml), select branch `develop-m0-capture-contract`, choose **Run workflow** if necessary and download the artifact from the completed run. Extract GitHub's outer artifact ZIP and upload the inner `revisions_0.1.0_2.2.2.zip` to Geeklog.
+- [Download revisions_0.1.0_2.2.2.zip from dist](https://github.com/hostellerie/revisions/raw/refs/heads/develop-m0-capture-contract/dist/revisions_0.1.0_2.2.2.zip)
+- [Build workflow](https://github.com/hostellerie/revisions/actions/workflows/build-dist.yml)
+- [Checksums](SHA256SUMS) (once first build has succeeded)
 
-The ZIP contains one top-level `revisions/` directory and is checked for syntax (PHP 5.6, 8.1, 8.3), contents and source-byte identity as requested by the [Memorandum](https://github.com/hostellerie/memorandum/blob/main/plugin-development-guide.md).
+The workflow also uploads a GitHub Actions artifact. Its generated commit is made with the GitHub Actions bot and `[skip ci]`. The push trigger watches plugin source paths rather than `dist/**`, preventing build loops. Pull requests validate packages but do not commit binaries.
 
-**Experimental plugin:** Static Pages baseline tracking needs explicit initialization before editing. PHP and template pages are excluded. No restoration or real Geeklog integration tests yet. Use only on a test instance.
+Checks include PHP syntax for 5.6/8.1/8.3, exact single `revisions/` ZIP root, required files, no development files, and byte-for-byte comparison with source files. See [Memorandum](https://github.com/hostellerie/memorandum/blob/main/plugin-development-guide.md).
+
+**Important:** the link to the ZIP will work only **after a successful initial run**. If Actions permissions prevent the bot from pushing, review the workflow's logs and repository Actions settings (workflow write permissions and branch protection).
+
+**Experimental version 0.1.0**: manual baseline initialization of simple Static Pages only; no restoration. No real Geeklog installation validated; use a disposable test site.
