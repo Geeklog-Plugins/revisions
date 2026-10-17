@@ -7,3 +7,12 @@
 .plugin-admin-nav .plugin-admin-nav__item:active { text-decoration: none !important; color: inherit; }
 .plugin-admin-nav .plugin-admin-nav__item:hover { background: rgba(127,127,127,.12); }
 .plugin-admin-nav .plugin-admin-nav__item:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
+/* Read-only comparison: distinguish changed fields and individual lines. */
+.revisions-compare-field--changed>h4 small{font-weight:normal;text-decoration:none;border-bottom:2px solid currentColor}
+.revisions-compare-diff{grid-column:1/-1;min-width:0}
+.revisions-line-diff{border:1px solid #aaa;padding:.65rem;max-height:28rem;overflow:auto}
+.revisions-line-added,.revisions-line-removed{padding:.25rem .4rem;overflow-wrap:anywhere;white-space:pre-wrap}
+.revisions-line-added{background:rgba(27,128,60,.12);border-left:3px solid #228447}
+.revisions-line-removed{background:rgba(180,55,55,.12);border-left:3px solid #b34747}
+.revisions-line-diff code{font-size:inherit;white-space:pre-wrap;overflow-wrap:anywhere}
