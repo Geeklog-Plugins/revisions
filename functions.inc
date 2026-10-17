@@ -53,7 +53,27 @@ function plugin_upgrade_revisions()
         COM_errorLog('Revisions: stored plugin version differs after upgrade.');
         return false;
     }
+    // Seed all existing eligible pages during upgrades, without resetting baselines.
+    REVISIONS_seedAllPages();
     return true;
+}
+function REVISIONS_seedAllPages()
+{
+    global $_TABLES;
+    $q = DB_query("SELECT sp_id FROM {$_TABLES['staticpage']} ORDER BY sp_id", 1);
+    if (!$q) { COM_errorLog('Revisions: unable to list Static Pages for automatic tracking.'); return false; }
+    $added = 0;
+    while ($row = DB_fetchArray($q)) {
+        $id = $row['sp_id'];
+        $key = DB_escapeString($id);
+        $exists = DB_query("SELECT sp_id FROM {$_TABLES['revisions_baseline']} WHERE sp_id='$key' LIMIT 1", 1);
+        if (!$exists) { COM_errorLog('Revisions: tracking lookup failed.'); return false; }
+        if (DB_numRows($exists) === 0) {
+            $snapshot = REVISIONS_snapshot($id);
+            if ($snapshot !== false && REVISIONS_initialize($id)) { $added++; }
+        }
+    }
+    return $added;
 }
 function REVISIONS_fields()
 {
@@ -127,7 +147,13 @@ function REVISIONS_captureChange($id,$type,$old_id,$uid)
     $from = $old_id !== '' ? $old_id : $id;
     $fromEscaped = DB_escapeString($from);
     $q = DB_query("SELECT snapshot_json,content_hash FROM {$_TABLES['revisions_baseline']} WHERE sp_id='$fromEscaped' LIMIT 1",1);
-    if (!$q || DB_numRows($q) !== 1) { return; }
+    if (!$q) { return; }
+    if (DB_numRows($q) !== 1) {
+        // For new pages or unseeded pre-existing pages, start from the saved state.
+        // Do not invent an earlier version: the post-save hook cannot see it.
+        REVISIONS_initialize($id);
+        return;
+    }
     $old = DB_fetchArray($q);
     $snapshot = REVISIONS_snapshot($id);
     if ($snapshot === false) { return; }
