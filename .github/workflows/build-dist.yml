@@ -52,8 +52,16 @@ jobs:
             foreach (array("autoinstall.php","functions.inc","admin/index.php") as $file) {
                 $tokens = token_get_all(file_get_contents($file));
                 $previous = null;
-                foreach ($tokens as $token) {
+                foreach ($tokens as $index => $token) {
                     if (!is_array($token) || $token[0] === T_WHITESPACE) { continue; }
+                    if ($token[0] === T_FUNCTION) {
+                        $next = null;
+                        for ($n = $index + 1; $n < count($tokens); $n++) {
+                            if (is_array($tokens[$n]) && $tokens[$n][0] === T_WHITESPACE) { continue; }
+                            $next = $tokens[$n]; break;
+                        }
+                        if (!is_array($next) || $next[0] !== T_STRING) { $previous = $token; continue; }
+                    }
                     if ($token[0] === T_FUNCTION &&
                         (!is_array($previous) || $previous[0] !== T_DOC_COMMENT ||
                          strpos($previous[1], "@return") === false)) {
