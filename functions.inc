@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Revisions Plugin 0.2.4
+ * Revisions Plugin 0.2.5
  * File: functions.inc
  * Purpose: Plugin API callbacks, snapshots and history persistence
  * Copyright (C) 2026
