@@ -197,22 +197,37 @@ if ($section === 'home') {
         . '<p>PHP and template Static Pages are excluded. No automatic restoration or asset backup is included.</p>';
 } elseif ($section === 'pages') {
     $out .= '<h2>Pages with revisions</h2><p>Only Static Pages with archived versions appear here.</p>';
-    $pages = DB_query("SELECT h.sp_id, COUNT(*) AS revision_count, MAX(h.created_at) AS last_revision, "
-        . "MAX(p.sp_title) AS page_title FROM {$_TABLES['revisions_history']} h "
-        . "LEFT JOIN {$_TABLES['staticpage']} p ON p.sp_id=h.sp_id "
-        . "GROUP BY h.sp_id ORDER BY (page_title IS NULL OR page_title = ''), page_title ASC, h.sp_id ASC LIMIT 200", 1);
-    if ($pages && DB_numRows($pages) > 0) {
-        $out .= '<table><thead><tr><th>Page</th><th>Revisions</th><th>Latest revision</th><th>History</th></tr></thead><tbody>';
+    // Aggregate only the history table; titles are resolved separately to avoid
+    // JOIN/GROUP BY incompatibilities across supported MySQL/MariaDB releases.
+    $pages = DB_query("SELECT sp_id, COUNT(*) AS revision_count, MAX(created_at) AS last_revision "
+        . "FROM {$_TABLES['revisions_history']} GROUP BY sp_id ORDER BY sp_id LIMIT 1000", 1);
+    if ($pages === false) {
+        COM_errorLog('Revisions: cannot list pages with revisions (SQL query failed).');
+        $out .= '<p>Unable to load pages with revisions. Check Geeklog error.log for SQL errors.</p>';
+    } elseif (DB_numRows($pages) === 0) {
+        $out .= '<p>No archived revisions yet. Revisions appear after eligible Static Pages are edited and saved.</p>';
+    } else {
+        $pageList = array();
         while ($page = DB_fetchArray($pages)) {
+            $page['page_title'] = REVISIONS_ADMIN_pageTitle($page['sp_id']);
+            $pageList[] = $page;
+        }
+        usort($pageList, function ($a, $b) {
+            $aMissing = $a['page_title'] === '(page unavailable)';
+            $bMissing = $b['page_title'] === '(page unavailable)';
+            if ($aMissing !== $bMissing) { return $aMissing ? 1 : -1; }
+            $cmp = strcasecmp($a['page_title'], $b['page_title']);
+            return $cmp !== 0 ? $cmp : strcmp($a['sp_id'], $b['sp_id']);
+        });
+        $out .= '<table><thead><tr><th>Page</th><th>Revisions</th><th>Latest revision</th><th>History</th></tr></thead><tbody>';
+        foreach ($pageList as $page) {
             $historyUrl = $base . '?section=history&sp_id=' . rawurlencode($page['sp_id']);
-            $out .= '<tr><td><strong>' . R_H(isset($page['page_title']) && trim((string)$page['page_title']) !== '' ? $page['page_title'] : '(page unavailable)') . '</strong>'
+            $out .= '<tr><td><strong>' . R_H($page['page_title']) . '</strong>'
                 . '<br><small>' . R_H($page['sp_id']) . '</small></td><td>'
-                . (int) $page['revision_count'] . '</td><td>' . R_H($page['last_revision']) . '</td>'
+                . (int)$page['revision_count'] . '</td><td>' . R_H($page['last_revision']) . '</td>'
                 . '<td><a href="' . R_H($historyUrl) . '">View revisions</a></td></tr>';
         }
         $out .= '</tbody></table>';
-    } else {
-        $out .= '<p>No archived revisions yet. Revisions appear automatically after eligible Static Pages are edited and saved.</p>';
     }
 } elseif ($section === 'history') {
     $pageFilter = isset($_GET['sp_id']) ? trim((string) $_GET['sp_id']) : '';
