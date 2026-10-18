@@ -172,7 +172,7 @@ $base = $_CONF['site_admin_url'] . '/plugins/revisions/index.php';
 $out = '<link rel="stylesheet" href="' . R_H($_CONF['site_admin_url'] . '/plugins/revisions/admin.css?v=' . plugin_chkVersion_revisions()) . '">'
     . '<h1>Revisions ' . R_H(plugin_chkVersion_revisions()) . '</h1>'
     . '<p>Static Pages history: capture, inspect, and copy earlier editorial source. Restoration is not yet available.</p>';
-$navItems = array('home'=>'Overview','pages'=>'Tracked pages','history'=>'History','help'=>'Help');
+$navItems = array('home'=>'Overview','pages'=>'Pages with revisions','history'=>'History','help'=>'Help');
 $out .= '<nav class="plugin-admin-nav" aria-label="Revisions administration"><div class="plugin-admin-nav__primary">';
 foreach ($navItems as $key => $label) {
     $active = $section === $key;
@@ -189,38 +189,39 @@ if ($section === 'home') {
     $revsNumber = $countHistory ? DB_fetchArray($countHistory) : array('cnt'=>'?');
     $out .= '<h2>Overview</h2><p><strong>' . R_H($pagesNumber['cnt']) . '</strong> tracked pages · <strong>'
         . R_H($revsNumber['cnt']) . '</strong> archived revisions.</p>'
-        . '<p><a href="' . R_H($base . '?section=pages') . '">Manage tracked pages</a> · '
+        . '<p><a href="' . R_H($base . '?section=pages') . '">Browse pages with revisions</a> · '
         . '<a href="' . R_H($base . '?section=history') . '">Browse history</a></p>'
-        . '<h3>Getting started</h3><ol><li>Open Tracked pages to confirm automatic enrollment.</li>'
+        . '<h3>Getting started</h3><ol><li>Open Pages with revisions after editing a page to see its history.</li>'
         . '<li>Edit any eligible Static Page and save your changes in Geeklog.</li>'
         . '<li>Open History to inspect and copy the previous source.</li></ol>'
         . '<p>PHP and template Static Pages are excluded. No automatic restoration or asset backup is included.</p>';
 } elseif ($section === 'pages') {
-    $newPages = REVISIONS_seedAllPages();
-    $out .= '<h2>Automatically tracked Static Pages</h2>'
-        . '<p>All existing eligible Static Pages are enrolled automatically. PHP and template pages are excluded.</p>';
-    if ($newPages === false) { $out .= '<p>Automatic discovery failed; consult Geeklog error.log.</p>'; }
-    else { $out .= '<p>Newly initialized on this visit: ' . (int)$newPages . '.</p>'; }
-    $tracked = DB_query("SELECT sp_id,updated_at FROM {$_TABLES['revisions_baseline']} ORDER BY updated_at DESC LIMIT 50", 1);
-$out .= '<h2>Tracked pages</h2><p>Check changes compares the current page with the last saved baseline.</p>';
-$out .= '<p><small>Tracking table: ' . R_H($_TABLES['revisions_baseline']) . '; History table: ' . R_H($_TABLES['revisions_history']) . '</small></p>';
-if ($tracked && DB_numRows($tracked) > 0) {
-    $out .= '<table><thead><tr><th>Page</th><th>Last tracking update</th><th>Check changes</th></tr></thead><tbody>';
-    while ($t = DB_fetchArray($tracked)) {
-        $token = SEC_createToken();
-        $out .= '<tr><td><strong>' . R_H(REVISIONS_ADMIN_pageTitle($t['sp_id'])) . '</strong><br><small>' . R_H($t['sp_id']) . '</small>' . '</td><td>' . R_H($t['updated_at']) . '</td><td>'
-            . '<form method="post" action="' . R_H($_CONF['site_admin_url'] . '/plugins/revisions/index.php') . '">'
-            . '<input type="hidden" name="sp_id" value="' . R_H($t['sp_id']) . '">'
-            . '<input type="hidden" name="action" value="reconcile">'
-            . '<input type="hidden" name="' . R_H(CSRF_TOKEN) . '" value="' . R_H($token) . '">'
-            . '<button type="submit">Check changes</button></form></td></tr>';
+    $out .= '<h2>Pages with revisions</h2><p>Only Static Pages with archived versions appear here.</p>';
+    $pages = DB_query("SELECT sp_id, COUNT(*) AS revision_count, MAX(created_at) AS last_revision "
+        . "FROM {$_TABLES['revisions_history']} GROUP BY sp_id ORDER BY last_revision DESC, sp_id LIMIT 200", 1);
+    if ($pages && DB_numRows($pages) > 0) {
+        $out .= '<table><thead><tr><th>Page</th><th>Revisions</th><th>Latest revision</th><th>History</th></tr></thead><tbody>';
+        while ($page = DB_fetchArray($pages)) {
+            $historyUrl = $base . '?section=history&sp_id=' . rawurlencode($page['sp_id']);
+            $out .= '<tr><td><strong>' . R_H(REVISIONS_ADMIN_pageTitle($page['sp_id'])) . '</strong>'
+                . '<br><small>' . R_H($page['sp_id']) . '</small></td><td>'
+                . (int) $page['revision_count'] . '</td><td>' . R_H($page['last_revision']) . '</td>'
+                . '<td><a href="' . R_H($historyUrl) . '">View revisions</a></td></tr>';
+        }
+        $out .= '</tbody></table>';
+    } else {
+        $out .= '<p>No archived revisions yet. Revisions appear automatically after eligible Static Pages are edited and saved.</p>';
     }
-    $out .= '</tbody></table>';
-} else {
-    $out .= '<p><strong>No pages are being tracked yet.</strong> No eligible pages are tracked yet. Check the Static Pages plugin and Geeklog error.log.</p>';
-}
 } elseif ($section === 'history') {
-    $q = DB_query("SELECT revision_id,sp_id,actor_id,created_at FROM {$_TABLES['revisions_history']} ORDER BY revision_id DESC LIMIT 50",1);
+    $pageFilter = isset($_GET['sp_id']) ? trim((string) $_GET['sp_id']) : '';
+    $where = $pageFilter !== '' ? " WHERE sp_id='" . DB_escapeString($pageFilter) . "'" : '';
+    $q = DB_query("SELECT revision_id,sp_id,actor_id,created_at FROM {$_TABLES['revisions_history']}"
+        . $where . " ORDER BY revision_id DESC LIMIT 200",1);
+    if ($pageFilter !== '') {
+        $out .= '<p><strong>History for: ' . R_H(REVISIONS_ADMIN_pageTitle($pageFilter)) . '</strong> '
+            . '<small>' . R_H($pageFilter) . '</small> · <a href="' . R_H($base . '?section=history')
+            . '">All revisions</a> · <a href="' . R_H($base . '?section=pages') . '">Pages</a></p>';
+    }
     $out .= $revisionDetail;
     if (!isset($_GET['revision_id'])) {
     $out .= '<h3>Revision history</h3><table><thead><tr><th>Revision</th><th>Page</th><th>Author</th><th>Date</th></tr></thead><tbody>';
@@ -234,7 +235,7 @@ $out .= '</tbody></table><p>Snapshots are stored in database. Select View to com
 
 } else {
     $out .= '<h2>Help</h2><p><strong>How tracking works:</strong> all eligible existing Static Pages are initialized automatically during upgrade and when opening Tracked pages; newly created pages start tracking on their first save. Edit and save, then look in History. An archive contains the earlier stored source.</p>'
-        . '<p><strong>Missing updates:</strong> use Check changes in Tracked pages. A recovered change has author ID 0 because the original editor is unknown.</p>'
+        . '<p><strong>Missing updates:</strong> check the automatic save hook and error.log. A recovered change has author ID 0 because the original editor is unknown.</p>'
         . '<p><strong>HTML source:</strong> select View in History, then copy the escaped source from the read-only field into the Geeklog HTML/source editor.</p>'
         . '<p><strong>Limitations:</strong> PHP/template pages, file recovery, automatic restore and multi-writer atomicity are not supported in this pilot.</p>'
         . '<p><a href="https://github.com/hostellerie/revisions">Project documentation</a></p>';
