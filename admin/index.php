@@ -1,13 +1,34 @@
 <?php
+
+/*
+ * Revisions Plugin 0.2.4
+ * File: admin/index.php
+ * Purpose: Administrative history, comparisons and read-only previews
+ * Copyright (C) 2026
+ * Author: Ben hostellerie DOT org AT gmail DOT com
+ * License: GNU General Public License, version 2 or later (see LICENSE).
+ * Target: Geeklog 2.2.2; PHP 5.6.40 and later.
+ */
+
 require_once '../../../lib-common.php';
 require_once '../../auth.inc.php';
 if (!SEC_inGroup('Root') || !SEC_hasRights('revisions.admin')) {
     COM_output(COM_createHTMLDocument('Access denied'));
     exit;
 }
+/**
+ * Check whether the administrator can edit the given Static Page.
+ * @param array $r Static Page ownership and permission fields.
+ * @return bool True when editor access is allowed.
+ */
 function REVISIONS_ADMIN_canEdit($r) {
     return SEC_hasAccess($r['owner_id'], $r['group_id'], $r['perm_owner'], $r['perm_group'], $r['perm_members'], $r['perm_anon']) >= 3;
 }
+/**
+ * Resolve a page's current human-readable title.
+ * @param string $id Static Page ID.
+ * @return string Page title or fallback.
+ */
 function REVISIONS_ADMIN_pageTitle($id) {
     global $_TABLES;
     $safe = DB_escapeString($id);
@@ -18,6 +39,12 @@ function REVISIONS_ADMIN_pageTitle($id) {
     }
     return '(page unavailable)';
 }
+/**
+ * Convert a global history ID to its ordinal within one page.
+ * @param string $id Static Page ID.
+ *  * @param int $globalRevisionId Global revision primary key.
+ * @return int|null One-based ordinal, or null if unavailable.
+ */
 function REVISIONS_ADMIN_pageRevisionNumber($id, $globalRevisionId) {
     global $_TABLES;
     $safe = DB_escapeString($id);
@@ -27,7 +54,18 @@ function REVISIONS_ADMIN_pageRevisionNumber($id, $globalRevisionId) {
     $row = DB_fetchArray($q);
     return (int)$row['total'];
 }
+/**
+ * Escape a value for safe HTML text or attribute output.
+ * @param mixed $v Value to escape.
+ * @return string HTML-escaped text.
+ */
 function R_H($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+/**
+ * Render bounded, escaped added/removed lines for visual comparison.
+ * @param string $before Archived source.
+ *  * @param string $after Current source.
+ * @return string Safe HTML for the diff or an explanatory message.
+ */
 function REVISIONS_ADMIN_lineDiff($before, $after)
 {
     if ($before === $after) { return '<p>No line changes.</p>'; }
