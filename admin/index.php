@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Revisions Plugin 0.2.4
+ * Revisions Plugin 0.2.5
  * File: admin/index.php
  * Purpose: Administrative history, comparisons and read-only previews
  * Copyright (C) 2026
