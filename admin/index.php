@@ -200,7 +200,7 @@ if ($section === 'home') {
     $pages = DB_query("SELECT h.sp_id, COUNT(*) AS revision_count, MAX(h.created_at) AS last_revision, "
         . "MAX(p.sp_title) AS page_title FROM {$_TABLES['revisions_history']} h "
         . "LEFT JOIN {$_TABLES['staticpage']} p ON p.sp_id=h.sp_id "
-        . "GROUP BY h.sp_id ORDER BY (page_title IS NULL), page_title ASC, h.sp_id ASC LIMIT 200", 1);
+        . "GROUP BY h.sp_id ORDER BY (page_title IS NULL OR page_title = ''), page_title ASC, h.sp_id ASC LIMIT 200", 1);
     if ($pages && DB_numRows($pages) > 0) {
         $out .= '<table><thead><tr><th>Page</th><th>Revisions</th><th>Latest revision</th><th>History</th></tr></thead><tbody>';
         while ($page = DB_fetchArray($pages)) {
