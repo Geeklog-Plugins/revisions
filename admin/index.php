@@ -126,10 +126,31 @@ if (isset($_GET['revision_id']) && ctype_digit((string) $_GET['revision_id'])) {
                 }
                 $rawHtml = isset($old['sp_content']) ? (string)$old['sp_content'] : '';
                 $currentSource = is_array($current) && isset($current['sp_content']) ? (string)$current['sp_content'] : '';
-                $revisionDetail .= '<h3>Archived HTML — copy and paste</h3>'
-                    . '<p>Copy this source into the Static Pages editor in HTML/source mode. No scripts or autotags run here.</p>'
+                // Sandboxed browser preview: no scripts, same-origin, forms or navigation.
+                // CSP also blocks external images, stylesheets, fonts and requests.
+                // Never run Geeklog's autotag or PHP renderers on archived source.
+                $previewDoc = '<!doctype html><html><head><meta charset="UTF-8">'
+                    . '<meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; '
+                    . 'script-src &#39;none&#39;; connect-src &#39;none&#39;; form-action &#39;none&#39;; '
+                    . 'img-src data:; style-src &#39;unsafe-inline&#39;">'
+                    . '<style>body{margin:1rem;font:16px/1.5 sans-serif;overflow-wrap:anywhere}'
+                    . 'img,video,iframe{max-width:100%}</style></head><body>'
+                    . $rawHtml . '</body></html>';
+                $revisionDetail .= '<h3>Archived content</h3>'
+                    . '<p>Visual preview is isolated: scripts and Geeklog autotags are not executed. '
+                    . 'External resources are blocked, so the appearance can differ from the published page.</p>'
+                    . '<div class="revisions-preview-tabs">'
+                    . '<input type="radio" id="revisions-tab-preview" name="revisions-content-tab" checked>'
+                    . '<label for="revisions-tab-preview">Visual preview</label>'
+                    . '<input type="radio" id="revisions-tab-html" name="revisions-content-tab">'
+                    . '<label for="revisions-tab-html">HTML source — copy and paste</label>'
+                    . '<div class="revisions-tab-panel revisions-tab-panel--preview">'
+                    . '<iframe class="revisions-preview-frame" sandbox="" loading="lazy" '
+                    . 'referrerpolicy="no-referrer" title="Archived HTML visual preview" srcdoc="'
+                    . R_H($previewDoc) . '"></iframe></div>'
+                    . '<div class="revisions-tab-panel revisions-tab-panel--html">'
                     . '<textarea readonly rows="14" spellcheck="false" aria-label="Archived HTML source" class="revisions-source">'
-                    . R_H($rawHtml) . '</textarea>';
+                    . R_H($rawHtml) . '</textarea></div></div>';
                 $revisionDetail .= '<details class="revisions-detail-fold"><summary>Revision history</summary>';
                 $historyId = DB_escapeString($rev['sp_id']);
                 $historyRows = DB_query("SELECT revision_id,created_at FROM {$_TABLES['revisions_history']} WHERE sp_id='$historyId' ORDER BY revision_id DESC LIMIT 50",1);
