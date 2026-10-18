@@ -1,20 +1,42 @@
 <?php
-/* Revisions 0.2.4: Static Pages history pilot, PHP 5.6-compatible syntax. */
+
+/*
+ * Revisions Plugin 0.2.4
+ * File: functions.inc
+ * Purpose: Plugin API callbacks, snapshots and history persistence
+ * Copyright (C) 2026
+ * Author: Ben hostellerie DOT org AT gmail DOT com
+ * License: GNU General Public License, version 2 or later (see LICENSE).
+ * Target: Geeklog 2.2.2; PHP 5.6.40 and later.
+ */
+
 global $_CONF, $_TABLES, $_DB_table_prefix;
 $_TABLES['revisions_baseline'] = $_DB_table_prefix . 'revisions_baseline';
 $_TABLES['revisions_history'] = $_DB_table_prefix . 'revisions_history';
+/**
+ * Expose the Revisions administration link to Geeklog.
+ * @return array|null Administration menu entry, or no entry without rights.
+ */
 function plugin_getadminoption_revisions()
 {
     global $_CONF;
     if (!SEC_hasRights('revisions.admin')) { return null; }
     return array('Revisions', $_CONF['site_admin_url'] . '/plugins/revisions/index.php', 0);
 }
+/**
+ * Expose the Revisions Command & Control entry.
+ * @return array Command & Control entry or empty array.
+ */
 function plugin_cclabel_revisions()
 {
     global $_CONF;
     if (!SEC_hasRights('revisions.admin')) { return array(); }
     return array('Revisions', $_CONF['site_admin_url'] . '/plugins/revisions/index.php');
 }
+/**
+ * Return the code version declared in autoinstall metadata.
+ * @return string Plugin version.
+ */
 function plugin_chkVersion_revisions()
 {
     global $_CONF;
@@ -25,6 +47,10 @@ function plugin_chkVersion_revisions()
 /**
  * Upgrade metadata only when required history storage is present.
  * 0.1.0 -> 0.2.4 introduces no database schema changes.
+ */
+/**
+ * Seed eligible pages and persist verified Geeklog plugin version metadata.
+ * @return bool True when upgrade completed; false on failure.
  */
 function plugin_upgrade_revisions()
 {
@@ -60,6 +86,10 @@ function plugin_upgrade_revisions()
     }
     return true;
 }
+/**
+ * Enroll eligible existing Static Pages without overwriting prior baselines.
+ * @return int|false Number of newly initialized pages, or false on failure.
+ */
 function REVISIONS_seedAllPages()
 {
     global $_TABLES;
@@ -78,6 +108,10 @@ function REVISIONS_seedAllPages()
     }
     return $added;
 }
+/**
+ * List Static Pages editorial fields included in a snapshot.
+ * @return array Field names.
+ */
 function REVISIONS_fields()
 {
     return array('sp_title','sp_page_title','sp_content','page_data','postmode','meta_description',
@@ -85,12 +119,22 @@ function REVISIONS_fields()
         'sp_php','sp_prev','sp_next','sp_parent','sp_centerblock','sp_where','sp_inblock',
         'sp_onmenu','sp_label','sp_help','sp_nf','search');
 }
+/**
+ * Copy supported editorial values from a Static Page row.
+ * @param array $row Database row.
+ * @return array Editorial snapshot.
+ */
 function REVISIONS_extract($row)
 {
     $out = array();
     foreach (REVISIONS_fields() as $field) { $out[$field] = isset($row[$field]) ? $row[$field] : null; }
     return $out;
 }
+/**
+ * Read an eligible Static Page snapshot; exclude PHP and template pages.
+ * @param string $id Static Page ID.
+ * @return array|false Snapshot, or false for missing/ineligible pages.
+ */
 function REVISIONS_snapshot($id)
 {
     global $_TABLES;
@@ -102,11 +146,22 @@ function REVISIONS_snapshot($id)
     if (!empty($row['sp_php']) || !empty($row['template_flag']) || !empty($row['template_id'])) { return false; }
     return REVISIONS_extract($row);
 }
+/**
+ * Serialize an editorial snapshot for hashing and persistence.
+ * @param array $snapshot Editorial data.
+ * @return string|false Encoded JSON or false.
+ */
 function REVISIONS_encode($snapshot)
 {
     $encoded = json_encode($snapshot);
     return $encoded === false ? false : $encoded;
 }
+/**
+ * Persist the latest known editorial state as a tracking baseline.
+ * @param string $id Static Page ID.
+ *  * @param array $snapshot Editorial snapshot.
+ * @return bool Success status.
+ */
 function REVISIONS_baseline($id, $snapshot)
 {
     global $_TABLES;
@@ -117,6 +172,11 @@ function REVISIONS_baseline($id, $snapshot)
     $sha = hash('sha256',$encoded);
     return (bool) DB_query("REPLACE INTO {$_TABLES['revisions_baseline']} (sp_id,snapshot_json,content_hash,updated_at) VALUES ('$key','$value','$sha',NOW())",1);
 }
+/**
+ * Initialize tracking only when no baseline exists; verify persisted hash.
+ * @param string $id Static Page ID.
+ * @return bool True if already tracked or initialized and verified.
+ */
 function REVISIONS_initialize($id)
 {
     global $_TABLES;
@@ -136,12 +196,28 @@ function REVISIONS_initialize($id)
     $encoded = REVISIONS_encode($snap);
     return $encoded !== false && isset($row['content_hash']) && $row['content_hash'] === hash('sha256', $encoded);
 }
+/**
+ * Process Geeklog item-saved events for tracked Static Pages.
+ * @param string $id Saved item ID.
+ *  * @param string $type Provider type.
+ *  * @param string $old_id Previous item ID, if renamed.
+ *  * @param string $sub_type Optional Geeklog subtype.
+ * @return void
+ */
 function plugin_itemsaved_revisions($id,$type,$old_id='',$sub_type='')
 {
     global $_USER;
     $uid = isset($_USER['uid']) ? (int) $_USER['uid'] : 0;
     REVISIONS_captureChange($id,$type,$old_id,$uid);
 }
+/**
+ * Archive the prior baseline when a saved Static Page's editorial state changes.
+ * @param string $id Current Static Page ID.
+ *  * @param string $type Provider type.
+ *  * @param string $old_id Previous ID when renamed.
+ *  * @param int $uid Editor ID or zero when unknown.
+ * @return void Writes history and updates baseline.
+ */
 function REVISIONS_captureChange($id,$type,$old_id,$uid)
 {
     global $_TABLES;
@@ -179,6 +255,11 @@ function REVISIONS_captureChange($id,$type,$old_id,$uid)
  * Read-only reconciliation trigger for a tracked page.
  * Only used by an explicitly authorized administrator action. History author 0
  * means the edit actor could not be established from this delayed scan.
+ */
+/**
+ * Check one existing tracked page for edits missed by the callback.
+ * @param string $id Static Page ID.
+ * @return bool False when the page cannot be snapshotted.
  */
 function REVISIONS_reconcilePage($id)
 {
