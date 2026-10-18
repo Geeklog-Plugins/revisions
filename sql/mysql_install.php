@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Revisions Plugin 0.2.4
+ * Revisions Plugin 0.2.5
  * File: sql/mysql_install.php
  * Purpose: Installation schema for baseline and archived revisions
  * Copyright (C) 2026
