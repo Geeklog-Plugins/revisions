@@ -40,6 +40,30 @@ jobs:
         with:
           persist-credentials: true
           ref: ${{ github.head_ref || github.ref_name }}
+      - name: Verify file headers and function documentation
+        run: |
+          set -euo pipefail
+          for f in autoinstall.php functions.inc admin/index.php sql/mysql_install.php admin/admin.css; do
+            grep -Fq "Revisions Plugin 0.2.5" "$f"
+            grep -Fq "Ben hostellerie DOT org AT gmail DOT com" "$f"
+            grep -Fq "License: GNU General Public License" "$f"
+          done
+          php -r '
+            foreach (array("autoinstall.php","functions.inc","admin/index.php") as $file) {
+                $tokens = token_get_all(file_get_contents($file));
+                $previous = null;
+                foreach ($tokens as $token) {
+                    if (!is_array($token) || $token[0] === T_WHITESPACE) { continue; }
+                    if ($token[0] === T_FUNCTION &&
+                        (!is_array($previous) || $previous[0] !== T_DOC_COMMENT ||
+                         strpos($previous[1], "@return") === false)) {
+                        fwrite(STDERR, "$file: missing function PHPDoc\n");
+                        exit(1);
+                    }
+                    $previous = $token;
+                }
+            }
+          '
       - name: Package and validate
         run: |
           set -euo pipefail
