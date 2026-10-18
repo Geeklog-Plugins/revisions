@@ -1,3 +1,5 @@
+> **Historical test plan for version 0.1.1.** This procedure is preserved for regression history. The Start tracking and Check changes interface described here is no longer the normal workflow in Revisions 0.2.5. For current installation and validation, see [README](../README.md).
+
 # Tester la capture Static Pages avec Revisions 0.1.1
 
 ## Parcours prioritaire
