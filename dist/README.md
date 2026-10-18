@@ -12,4 +12,6 @@ Checks include PHP syntax for 5.6/8.1/8.3, exact single `revisions/` ZIP root, r
 
 **Important:** the link to the ZIP will work only **after a successful initial run**. If Actions permissions prevent the bot from pushing, review the workflow's logs and repository Actions settings (workflow write permissions and branch protection).
 
-**Experimental version 0.2.5**: manual baseline initialization of simple Static Pages only; no restoration. No real Geeklog installation validated; use a disposable test site.
+**Experimental version 0.2.5**: eligible Static Pages are enrolled automatically; source history and sandboxed visual previews are available; automatic restoration is not implemented. Installation was manually validated on a Geeklog 2.2.2 test site. This does not establish production readiness.
+
+Only the latest installable ZIP is retained in `dist/`; superseded packages remain accessible through GitHub's release and commit histories.
