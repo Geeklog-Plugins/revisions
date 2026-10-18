@@ -29,3 +29,13 @@
 .revisions-detail-fold>summary{cursor:pointer;font-weight:600;padding:.25rem;list-style:disclosure-closed}
 .revisions-detail-fold[open]>summary{margin-bottom:.85rem}
 .revisions-detail-fold>summary:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+
+/* Compact, consistent collapsed revision panels. */
+.revisions-detail-fold{margin:.55rem 0;padding:0;border:1px solid #b8c1bb;border-radius:.35rem;overflow:hidden}
+.revisions-detail-fold>summary{display:list-item;list-style-position:inside;padding:.8rem 1rem;margin:0;cursor:pointer;font-weight:600;line-height:1.35;background:rgba(127,127,127,.045)}
+.revisions-detail-fold>summary:hover{background:rgba(127,127,127,.1)}
+.revisions-detail-fold[open]>summary{border-bottom:1px solid #c5ccc7;margin:0}
+.revisions-detail-fold>summary:focus-visible{outline:2px solid currentColor;outline-offset:-3px}
+.revisions-detail-fold>p,.revisions-detail-fold>h4,.revisions-detail-fold>ul{margin:.75rem 1rem}
+.revisions-detail-fold>.revisions-source,.revisions-detail-fold>.revisions-line-diff{box-sizing:border-box;margin:.75rem 1rem;width:calc(100% - 2rem);max-height:20rem;overflow:auto}
+.revisions-history-list{max-height:16rem;overflow:auto;padding-left:1.5rem}
