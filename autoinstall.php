@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Revisions Plugin 0.2.4
+ * Revisions Plugin 0.2.5
  * File: autoinstall.php
  * Purpose: Geeklog installation metadata and compatibility hooks
  * Copyright (C) 2026
@@ -18,7 +18,7 @@
 function plugin_autoinstall_revisions($pi_name)
 {
     return array(
-        'info' => array('pi_name'=>'revisions','pi_display_name'=>'Revisions','pi_version'=>'0.2.4','pi_gl_version'=>'2.2.2','pi_homepage'=>'https://github.com/hostellerie/revisions'),
+        'info' => array('pi_name'=>'revisions','pi_display_name'=>'Revisions','pi_version'=>'0.2.5','pi_gl_version'=>'2.2.2','pi_homepage'=>'https://github.com/hostellerie/revisions'),
         'groups' => array('Revisions Admin'=>'Manage editorial revisions'),
         'features' => array('revisions.admin'=>'Manage revision history'),
         'mappings' => array('revisions.admin'=>array('Revisions Admin')),
