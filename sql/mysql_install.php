@@ -1,4 +1,16 @@
 <?php
+
+/*
+ * Revisions Plugin 0.2.4
+ * File: sql/mysql_install.php
+ * Purpose: Installation schema for baseline and archived revisions
+ * Copyright (C) 2026
+ * Author: Ben hostellerie DOT org AT gmail DOT com
+ * License: GNU General Public License, version 2 or later (see LICENSE).
+ * Target: Geeklog 2.2.2; PHP 5.6.40 and later.
+ */
+
+/** Create plugin-owned tracking tables: baseline and archived revisions. */
 $_SQL[] = "CREATE TABLE {$_TABLES['revisions_baseline']} (
 sp_id varchar(128) NOT NULL, snapshot_json mediumtext NOT NULL,
 content_hash char(64) NOT NULL, updated_at datetime NOT NULL,
