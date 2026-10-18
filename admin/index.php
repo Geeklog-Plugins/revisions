@@ -18,6 +18,15 @@ function REVISIONS_ADMIN_pageTitle($id) {
     }
     return '(page unavailable)';
 }
+function REVISIONS_ADMIN_pageRevisionNumber($id, $globalRevisionId) {
+    global $_TABLES;
+    $safe = DB_escapeString($id);
+    $rid = (int)$globalRevisionId;
+    $q = DB_query("SELECT COUNT(*) AS total FROM {$_TABLES['revisions_history']} WHERE sp_id='$safe' AND revision_id<=$rid",1);
+    if (!$q || DB_numRows($q) !== 1) { return null; }
+    $row = DB_fetchArray($q);
+    return (int)$row['total'];
+}
 function R_H($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 function REVISIONS_ADMIN_lineDiff($before, $after)
 {
@@ -104,7 +113,8 @@ if (isset($_GET['revision_id']) && ctype_digit((string) $_GET['revision_id'])) {
             $old = json_decode($rev['snapshot_json'], true);
             $current = REVISIONS_snapshot($rev['sp_id']);
             if (is_array($old) && hash('sha256', $rev['snapshot_json']) === $rev['content_hash']) {
-                $revisionDetail .= '<section class="revisions-detail"><h2>Revision #' . R_H($rid) . '</h2>'
+                $localNumber = REVISIONS_ADMIN_pageRevisionNumber($rev['sp_id'], $rid);
+                $revisionDetail .= '<section class="revisions-detail"><h2>Revision #' . R_H($localNumber === null ? '?' : $localNumber) . '</h2>'
                     . '<p>' . R_H(REVISIONS_ADMIN_pageTitle($rev['sp_id'])) . ' · ' . R_H($rev['created_at']) . '</p>'
                     . '<p>Archived fields — source values, not rendered HTML.</p>';
                 foreach (array('sp_title'=>'Title','meta_description'=>'Meta description') as $field=>$label) {
@@ -124,10 +134,12 @@ if (isset($_GET['revision_id']) && ctype_digit((string) $_GET['revision_id'])) {
                 $historyId = DB_escapeString($rev['sp_id']);
                 $historyRows = DB_query("SELECT revision_id,created_at FROM {$_TABLES['revisions_history']} WHERE sp_id='$historyId' ORDER BY revision_id DESC LIMIT 50",1);
                 if ($historyRows) {
-                    $revisionDetail .= '<ul>';
+                    $revisionDetail .= '<ul class="revisions-history-list">';
+                    $historicalNumbers = array();
                     while ($historyRow = DB_fetchArray($historyRows)) {
                         $historyUrl = $_CONF['site_admin_url'] . '/plugins/revisions/index.php?revision_id=' . (int)$historyRow['revision_id'];
-                        $revisionDetail .= '<li><a href="' . R_H($historyUrl) . '">Revision #' . (int)$historyRow['revision_id'] . '</a> — '
+                        $itemNumber = REVISIONS_ADMIN_pageRevisionNumber($rev['sp_id'], $historyRow['revision_id']);
+                        $revisionDetail .= '<li><a href="' . R_H($historyUrl) . '">Revision #' . ($itemNumber === null ? '?' : (int)$itemNumber) . '</a> — '
                             . R_H($historyRow['created_at']) . '</li>';
                     }
                     $revisionDetail .= '</ul>';
@@ -236,15 +248,15 @@ if ($section === 'home') {
         . $where . " ORDER BY revision_id DESC LIMIT 200",1);
     if ($pageFilter !== '') {
         $out .= '<p><strong>History for: ' . R_H(REVISIONS_ADMIN_pageTitle($pageFilter)) . '</strong> '
-            . '<small>' . R_H($pageFilter) . '</small> · <a href="' . R_H($base . '?section=history')
-            . '">All revisions</a> · <a href="' . R_H($base . '?section=pages') . '">Pages</a></p>';
+            . '<small>' . R_H($pageFilter) . '</small></p>';
     }
     $out .= $revisionDetail;
     if (!isset($_GET['revision_id'])) {
     $out .= '<h3>Revision history</h3><table><thead><tr><th>Revision</th><th>Page</th><th>Author</th><th>Date</th></tr></thead><tbody>';
 if ($q) { while ($r=DB_fetchArray($q)) {
     $detailUrl = $_CONF['site_admin_url'] . '/plugins/revisions/index.php?revision_id=' . (int) $r['revision_id'];
-    $out .= '<tr><td><a href="' . R_H($detailUrl) . '">#'.R_H($r['revision_id']).' — View</a></td><td>'.R_H($r['sp_id']).'</td><td>'.R_H($r['actor_id']).'</td><td>'.R_H($r['created_at']).'</td></tr>';
+    $pageNumber = REVISIONS_ADMIN_pageRevisionNumber($r['sp_id'], $r['revision_id']);
+    $out .= '<tr><td><a href="' . R_H($detailUrl) . '">#'.R_H($pageNumber === null ? '?' : $pageNumber).' — View</a></td><td>'.R_H($r['sp_id']).'</td><td>'.R_H($r['actor_id']).'</td><td>'.R_H($r['created_at']).'</td></tr>';
 } }
 $out .= '</tbody></table><p>Snapshots are stored in database. Select View to compare archived source and current source.</p>';
 
