@@ -45,10 +45,6 @@ function plugin_chkVersion_revisions()
     return $spec['info']['pi_version'];
 }
 /**
- * Upgrade metadata only when required history storage is present.
- * 0.1.0 -> 0.2.4 introduces no database schema changes.
- */
-/**
  * Seed eligible pages and persist verified Geeklog plugin version metadata.
  * @return bool True when upgrade completed; false on failure.
  */
@@ -251,11 +247,6 @@ function REVISIONS_captureChange($id,$type,$old_id,$uid)
     }
 }
 
-/**
- * Read-only reconciliation trigger for a tracked page.
- * Only used by an explicitly authorized administrator action. History author 0
- * means the edit actor could not be established from this delayed scan.
- */
 /**
  * Check one existing tracked page for edits missed by the callback.
  * @param string $id Static Page ID.
