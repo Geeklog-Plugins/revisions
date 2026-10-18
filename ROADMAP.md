@@ -1,6 +1,22 @@
 # Revisions — Roadmap Geeklog 2.2.2
 
-**Status:** planned; no implementation yet. **Target:** Revisions 1.0.0. Updated 2026-10-16.
+**Status:** experimental pre-release 0.2.5 implemented for eligible Static Pages; not production-ready. **Target:** Revisions 1.0.0. Updated 2026-10-18.
+
+## Current implementation (0.2.5, October 2026)
+
+This roadmap remains the **target architecture** for a full 1.0.0; unchecked milestones below are not proof that no prototype exists. The released 0.2.5 concept preview currently includes:
+
+- Automatic first-time baseline enrollment of eligible Static Pages on installation and upgrade, plus initialization on new page saves.
+- Post-save change detection relative to the stored baseline, with earlier source snapshots preserved in plugin-owned SQL tables.
+- Admin navigation and a page index listing only pages with revisions, ordered alphabetically and linked to per-page history.
+- Per-page revision numbering, archived/current metadata, safe read-only line comparison, sandboxed visual HTML preview, and original HTML source for copy/paste.
+- Version updates preserving installed history, PHP syntax matrix CI (5.6/8.1/8.3), package generation and source/header PHPDoc checks.
+
+**Not yet implemented/guaranteed:** support for Geeklog stories, provider-mediated restoration, complete lifecycle/retention controls, atomic pre-save capture, exhaustive save-path and concurrency safety, and production-grade backup/recovery. The post-save callback cannot reconstruct changes from before a baseline exists.
+
+Pilot testing confirmed installation and core history views on Geeklog 2.2.2. See [README](README.md) for current user instructions and limitations.
+
+---
 
 ## Scope
 Automatic revision history, comparison and safe restoration for Geeklog articles (story) and Static Pages (staticpages). Not a trash bin, backup system, media archive, or Geeklog's existing story expiration archive. Versions created before installation are unavailable unless recovered from external backups.
