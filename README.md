@@ -40,6 +40,7 @@ Existing revision records are retained on normal version upgrades. Make a backup
 
 - [Roadmap and status](ROADMAP.md)
 - [Latest installable ZIP and checksums](dist/)
+- [Current 0.2.5 acceptance test](docs/TEST-STATICPAGES-0.2.5.md)
 - [Historic 0.1.1 test procedure](docs/TEST-STATICPAGES-0.1.1.md) (archived, not current instructions)
 - [Geeklog save hooks audit](docs/M0-SAVE-HOOKS-AUDIT.md)
 - [Memorandum development guidelines](https://github.com/hostellerie/memorandum/blob/main/plugin-development-guide.md)
