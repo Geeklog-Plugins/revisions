@@ -43,46 +43,46 @@ jobs:
       - name: Package and validate
         run: |
           set -euo pipefail
-          grep -Eq "pi_version.*0[.]2[.]2" autoinstall.php
+          grep -Eq "pi_version.*0[.]2[.]3" autoinstall.php
           grep -Fq "function plugin_chkVersion_revisions()" functions.inc
           grep -Fq "return \$spec['info']['pi_version'];" functions.inc
           mkdir -p build/revisions/admin build/revisions/sql dist
           cp autoinstall.php functions.inc build/revisions/
           cp admin/index.php admin/admin.css build/revisions/admin/
           cp sql/mysql_install.php build/revisions/sql/
-          (cd build && zip -r -q ../dist/revisions_0.2.2_2.2.2.zip revisions)
-          unzip -t dist/revisions_0.2.2_2.2.2.zip
-          test "$(unzip -Z1 dist/revisions_0.2.2_2.2.2.zip | cut -d/ -f1 | sort -u)" = "revisions"
+          (cd build && zip -r -q ../dist/revisions_0.2.3_2.2.2.zip revisions)
+          unzip -t dist/revisions_0.2.3_2.2.2.zip
+          test "$(unzip -Z1 dist/revisions_0.2.3_2.2.2.zip | cut -d/ -f1 | sort -u)" = "revisions"
           for f in autoinstall.php functions.inc admin/index.php admin/admin.css sql/mysql_install.php; do
-            unzip -p dist/revisions_0.2.2_2.2.2.zip "revisions/$f" | cmp - "$f"
+            unzip -p dist/revisions_0.2.3_2.2.2.zip "revisions/$f" | cmp - "$f"
           done
-          if unzip -Z1 dist/revisions_0.2.2_2.2.2.zip | grep -E '(^|/)(\.git|\.github|tests|pilot|docs)/'; then
+          if unzip -Z1 dist/revisions_0.2.3_2.2.2.zip | grep -E '(^|/)(\.git|\.github|tests|pilot|docs)/'; then
             echo 'Development files found in archive'
             exit 1
           fi
           # Keep only the just-validated installable archive in dist.
-          find dist -maxdepth 1 -type f -name 'revisions_*.zip' ! -name 'revisions_0.2.2_2.2.2.zip' -print -delete
-          sha256sum dist/revisions_0.2.2_2.2.2.zip > dist/SHA256SUMS
+          find dist -maxdepth 1 -type f -name 'revisions_*.zip' ! -name 'revisions_0.2.3_2.2.2.zip' -print -delete
+          sha256sum dist/revisions_0.2.3_2.2.2.zip > dist/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
-          name: revisions_0.2.2_2.2.2
+          name: revisions_0.2.3_2.2.2
           path: |
-            dist/revisions_0.2.2_2.2.2.zip
+            dist/revisions_0.2.3_2.2.2.zip
             dist/SHA256SUMS
           if-no-files-found: error
           retention-days: 30
-      - name: Publish GitHub v0.2.2 pre-release
+      - name: Publish GitHub v0.2.3 pre-release
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop-m0-capture-contract'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          if gh release view v0.2.2 >/dev/null 2>&1; then
-            gh release upload v0.2.2 dist/revisions_0.2.2_2.2.2.zip dist/SHA256SUMS --clobber
+          if gh release view v0.2.3 >/dev/null 2>&1; then
+            gh release upload v0.2.3 dist/revisions_0.2.3_2.2.2.zip dist/SHA256SUMS --clobber
           else
-            gh release create v0.2.2 dist/revisions_0.2.2_2.2.2.zip dist/SHA256SUMS \
-              --target "${GITHUB_SHA}" --prerelease --title "Revisions 0.2.2 pre-release" \
+            gh release create v0.2.3 dist/revisions_0.2.3_2.2.2.zip dist/SHA256SUMS \
+              --target "${GITHUB_SHA}" --prerelease --title "Revisions 0.2.3 pre-release" \
               --notes "Concept preview for Geeklog 2.2.2: eligible Static Pages tracked by default, source history, archived HTML copy/paste, and read-only comparison. Restoration is not implemented. PHP and template Static Pages are excluded."
           fi
       - name: Commit generated archive to development branch
@@ -92,7 +92,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f dist/revisions_0.2.2_2.2.2.zip dist/SHA256SUMS
+          git add -f dist/revisions_0.2.3_2.2.2.zip dist/SHA256SUMS
           # Stage tracked deletions too; otherwise old ZIPs remain in the branch.
           git add -u -- dist/
           if git diff --cached --quiet; then
